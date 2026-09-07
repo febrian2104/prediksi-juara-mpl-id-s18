@@ -1,93 +1,31 @@
 {
   "report_version": "1.0",
   "season": 18,
-  "observed_at": "2026-09-07",
-  "sources": {
-    "schedule_results": "https://id-mpl.com/id/schedule",
-    "rosters": [
-      "https://id-mpl.com/en/team/ae",
-      "https://id-mpl.com/en/team/btr",
-      "https://id-mpl.com/en/team/dewa",
-      "https://id-mpl.com/en/team/evos",
-      "https://id-mpl.com/en/team/geek",
-      "https://id-mpl.com/en/team/navi",
-      "https://id-mpl.com/en/team/onic",
-      "https://id-mpl.com/en/team/rrq",
-      "https://id-mpl.com/en/team/tlid"
-    ]
-  },
+  "snapshot_id": "S18_D20260907",
+  "cutoff_date": "2026-09-07",
+  "cutoff_interpretation": "End of day Asia/Jakarta (WIB).",
+  "source_data_observed_at": "2026-09-07",
+  "retrospective_reconstruction": false,
   "scope": {
     "team_count": 9,
-    "roster_member_count": 79,
-    "roster_history_row_count": 79,
-    "player_count": 59,
-    "staff_count": 20,
-    "scheduled_match_count": 72,
+    "schedule_match_count": 72,
     "completed_match_count": 32,
-    "remaining_match_count": 40,
-    "completed_through_week": 4
+    "scheduled_match_count": 40,
+    "completed_weeks": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "partial_weeks": [],
+    "roster_member_count_available_at_cutoff": 79
   },
-  "temporal_policy": {
-    "roster_valid_from": "2026-08-31",
-    "basis": "Tanggal verifikasi halaman resmi, bukan tanggal pengumuman roster.",
-    "historical_use_guard": "Roster ini hanya boleh dipakai pada snapshot dengan cutoff >= valid_from.",
-    "roster_observed_at": [
-      "2026-09-01"
-    ]
+  "temporal_guards": {
+    "future_results_hidden": true,
+    "roster_rule": "valid_from <= cutoff_date <= valid_to (when valid_to exists)",
+    "outcome_availability_assumption": "Skor final pada tanggal pertandingan dianggap tersedia pada akhir hari WIB.",
+    "source_limitation": "Halaman resmi diamati pada tanggal cutoff. Waktu pengamatan intrahari tidak direkam; snapshot merepresentasikan data yang tersedia saat pengambilan."
   },
-  "blocking_issue_count": 0,
-  "checks": [
-    {
-      "check_id": "nine_expected_teams",
-      "status": "pass",
-      "count": 9
-    },
-    {
-      "check_id": "schedule_team_coverage",
-      "status": "pass",
-      "count": 9
-    },
-    {
-      "check_id": "roster_team_coverage",
-      "status": "pass",
-      "count": 9
-    },
-    {
-      "check_id": "double_round_robin_match_count",
-      "status": "pass",
-      "count": 72
-    },
-    {
-      "check_id": "each_pair_plays_twice",
-      "status": "pass",
-      "count": 36
-    },
-    {
-      "check_id": "each_team_plays_sixteen",
-      "status": "pass",
-      "count": 16
-    },
-    {
-      "check_id": "unique_official_match_ids",
-      "status": "pass",
-      "count": 0
-    },
-    {
-      "check_id": "completed_scores_valid",
-      "status": "pass",
-      "count": 32
-    },
-    {
-      "check_id": "no_future_results",
-      "status": "pass",
-      "count": 0
-    },
-    {
-      "check_id": "unique_team_nickname_rows",
-      "status": "pass",
-      "count": 0
-    }
-  ],
   "completed_results": [
     {
       "week": 1,
@@ -409,16 +347,5 @@
       "team_b_score": 2,
       "winner_team_id": "AE"
     }
-  ],
-  "update_scope": {
-    "refreshed_tables": [
-      "schedule_results"
-    ],
-    "previous_schedule_observed_at": [
-      "2026-09-01"
-    ],
-    "new_completed_match_count": 8,
-    "previous_completed_results_unchanged": true,
-    "roster_note": "Roster yang telah tersimpan dipertahankan; halaman roster tidak diambil ulang pada update regular season ini."
-  }
+  ]
 }

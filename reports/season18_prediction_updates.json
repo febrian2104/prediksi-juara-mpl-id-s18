@@ -2,13 +2,13 @@
   "report_version": "1.0",
   "season": 18,
   "method": "retrospective_as_of_reconstruction_and_weekly_update",
-  "source_data_observed_at": "2026-09-01",
-  "requested_as_of": null,
-  "snapshot_count": 4,
+  "source_data_observed_at": "2026-09-07",
+  "requested_as_of": "2026-09-07",
+  "snapshot_count": 5,
   "preseason_snapshot_count": 1,
-  "weekly_snapshot_count": 3,
+  "weekly_snapshot_count": 4,
   "partial_as_of_snapshot_count": 0,
-  "latest_completed_week": 3,
+  "latest_completed_week": 4,
   "leakage_guards": {
     "preseason_results_used": 0,
     "future_week_results_hidden": true,
@@ -237,6 +237,57 @@
           "accuracy": 0.0,
           "brier_score": 0.0003706009515949682,
           "log_loss": 0.0008779135828439477
+        }
+      }
+    },
+    {
+      "snapshot_id": "S18_W04",
+      "prediction_type": "weekly",
+      "completed_week": 4,
+      "feature_cutoff_date": "2026-09-06",
+      "available_result_count": 32,
+      "partial_week": null,
+      "roster_player_rows_available_at_cutoff": 59,
+      "roster_feature_rows_used": 0,
+      "completed_match_count": 32,
+      "simulated_regular_match_count": 40,
+      "leader_team_id": "TLID",
+      "leader_champion_probability": 0.1984,
+      "probability_sum": 1.0,
+      "match_accuracy": {
+        "evaluated_match_count": 32,
+        "correct_prediction_count": 20,
+        "incorrect_prediction_count": 12,
+        "match_accuracy": 0.625,
+        "brier_score": 0.24706285122819766,
+        "log_loss": 0.6863295912794607
+      },
+      "online_learning": {
+        "enabled": true,
+        "method": "regularized_logit_temperature",
+        "update_count": 32,
+        "final_observation_count": 32,
+        "final_confidence_scale": 0.9458708819497875,
+        "base_prequential_metrics": {
+          "evaluated_match_count": 32,
+          "correct_prediction_count": 20,
+          "incorrect_prediction_count": 12,
+          "match_accuracy": 0.625,
+          "brier_score": 0.24665620503451077,
+          "log_loss": 0.6853705932577857
+        },
+        "adaptive_prequential_metrics": {
+          "evaluated_match_count": 32,
+          "correct_prediction_count": 20,
+          "incorrect_prediction_count": 12,
+          "match_accuracy": 0.625,
+          "brier_score": 0.24706285122819766,
+          "log_loss": 0.6863295912794607
+        },
+        "adaptive_minus_base": {
+          "accuracy": 0.0,
+          "brier_score": 0.0004066461936868826,
+          "log_loss": 0.0009589980216749838
         }
       }
     }

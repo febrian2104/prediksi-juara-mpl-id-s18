@@ -117,4 +117,11 @@ def test_future_season_snapshot_ids_are_not_hard_coded() -> None:
 
     windows = build_live_prediction_windows(schedule)
 
-    assert windows["snapshot_id"].tolist() == ["S19_PRE", "S19_W01", "S19_W02", "S19_W03"]
+    assert windows["snapshot_id"].tolist() == [
+        "S19_PRE",
+        "S19_W01",
+        "S19_W02",
+        "S19_W03",
+        "S19_W04",
+    ]
+    assert windows["available_result_count"].tolist() == [0, 8, 16, 24, 32]

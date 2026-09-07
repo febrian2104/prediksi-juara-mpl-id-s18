@@ -31,22 +31,24 @@ Mengambil data S18 terbaru, membuat ulang seluruh snapshot pramusim/mingguan, da
 memperbarui explainability:
 
 ```bash
-./scripts/run_local_pipeline.sh update 2026-08-31
+./scripts/run_local_pipeline.sh update 2026-09-07
 ```
 
 Untuk membuat snapshot retrospektif pada akhir tanggal tertentu tanpa memundurkan tanggal
 roster, jalankan:
 
 ```bash
-make snapshot-season18 AS_OF=2026-08-31
-make update-predictions AS_OF=2026-08-31
+make snapshot-season18 AS_OF=2026-09-07
+make update-predictions AS_OF=2026-09-07
 make explain-season18
 ```
 
-Snapshot 31 Agustus memakai 24 hasil sampai Week 3 dan menyisakan 48 pertandingan. Roster
-yang pertama diverifikasi 31 Agustus tersedia pada snapshot ini. Snapshot retrospektif
-21 Agustus tetap tersedia di `data/season18/snapshots/2026-08-21` untuk audit cutoff
-parsial Week 2.
+Snapshot 7 September memakai 32 hasil sampai Week 4 dan menyisakan 40 pertandingan.
+Snapshot prediksi `S18_W04` memiliki cutoff 6 September (akhir Week 4); tanggal verifikasi
+sumbernya 7 September. Data bertanggal disimpan di `data/season18/snapshots/2026-09-07/`.
+Arsip 21 Agustus (Week 2 parsial) dan 31 Agustus (24 hasil sampai Week 3) dipertahankan.
+Pembaruan regular season 7 September tidak mengambil ulang roster; tanggal observasi roster
+tetap 1 September, dengan `valid_from` pertama 31 Agustus 2026.
 
 Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 
@@ -57,7 +59,7 @@ Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 Menjalankan semuanya secara berurutan:
 
 ```bash
-./scripts/run_local_pipeline.sh all 2026-08-31
+./scripts/run_local_pipeline.sh all 2026-09-07
 ```
 
 Memvalidasi format regular season dan playoff aktif:
