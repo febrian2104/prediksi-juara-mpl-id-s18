@@ -91,6 +91,7 @@ ROLE_MAP = {
     "mid lane": "mid_lane",
     "midlane": "mid_lane",
     "roam": "roamer",
+    "roamer": "roamer",
     "coach": "coach",
     "asst. coach": "assistant_coach",
     "analyst": "analyst",
@@ -497,6 +498,20 @@ def build_season18_report(
     checks = validate_season18_data(teams, rosters, schedule, observed_at)
     completed = schedule["status"].eq("completed")
     active_roster = rosters.loc[rosters["valid_to"].isna()]
+    roster_valid_from_dates = sorted(
+        pd.to_datetime(rosters["valid_from"], errors="coerce")
+        .dropna()
+        .dt.date.astype(str)
+        .unique()
+        .tolist()
+    )
+    roster_observed_at_dates = sorted(
+        pd.to_datetime(rosters["observed_at"], errors="coerce")
+        .dropna()
+        .dt.date.astype(str)
+        .unique()
+        .tolist()
+    )
     return {
         "report_version": "1.0",
         "season": 18,
@@ -521,7 +536,9 @@ def build_season18_report(
             else 0,
         },
         "temporal_policy": {
-            "roster_valid_from": observed_at.isoformat(),
+            "roster_valid_from": roster_valid_from_dates[0] if roster_valid_from_dates else None,
+            "roster_valid_from_dates": roster_valid_from_dates,
+            "roster_observed_at": roster_observed_at_dates,
             "basis": "Tanggal verifikasi halaman resmi, bukan tanggal pengumuman roster.",
             "historical_use_guard": (
                 "Roster ini hanya boleh dipakai pada snapshot dengan cutoff >= valid_from."

@@ -19,9 +19,9 @@ dashboard agar hasil eksperimen dapat direproduksi.
   evaluasi kalibrasi sudah tersedia.
 - Model final terkalibrasi sudah dilatih ulang pada Season 4-17.
 - Tim, roster bertanggal, jadwal, dan hasil resmi Season 18 sudah diintegrasikan dengan
-  snapshot 31 Agustus 2026.
+  snapshot 14 September 2026.
 - Simulasi Monte Carlo regular season dan playoff Season 18 sudah tersedia.
-- Rekonstruksi pramusim serta pembaruan Week 1-3 sampai 31 Agustus 2026 sudah tersedia
+- Rekonstruksi pramusim serta pembaruan Week 1-5 sampai 14 September 2026 sudah tersedia
   dengan cutoff leakage-safe untuk bundle deployment saat ini.
 - Explainability global/lokal, dashboard interaktif, dan otomasi pipeline lokal sudah
   tersedia tanpa GitHub Actions.
@@ -93,7 +93,7 @@ make models
 make season18
 make validate-season-config
 make verify
-make local-pipeline OBSERVED_AT=2026-08-31
+make local-pipeline OBSERVED_AT=2026-09-14
 make test
 make lint
 make dashboard
@@ -209,8 +209,9 @@ Fitur yang tersedia meliputi:
 
 Canonical roster historis Season 4-17 belum mempunyai tanggal efektif. Karena itu enam
 fitur current-roster pada backtest tetap nonaktif dan bernilai missing, bukan dianggap nol.
-Roster live Season 18 sudah mempunyai `valid_from=2026-08-31`, berdasarkan tanggal pertama
-halaman resmi diverifikasi. Tanggal ini sengaja tidak dimundurkan ke awal musim.
+Roster live Season 18 memakai `valid_from` per anggota. Anggota awal memakai 31 Agustus
+2026, sedangkan anggota yang baru terlihat pada pembaruan ini memakai 14 September 2026.
+Tanggal tersebut sengaja tidak dimundurkan ke awal musim.
 
 Baseline terdiri dari probabilitas uniform dan probabilitas `elo_strength`. Evaluasi
 chronological Season 8-17 mencakup 93 snapshot. Dibanding uniform, Elo memperbaiki
@@ -275,14 +276,16 @@ di-reset pada awal setiap season. Accuracy tetap 66,17%, sedangkan Brier score t
 0,220528 menjadi 0,220427 dan log loss turun dari 0,632517 menjadi 0,632215. Perbaikannya
 kecil, sehingga lapisan ini hanya mengoreksi confidence dan tidak menggantikan model utama.
 
-Snapshot data live 31 Agustus 2026 berisi 9 tim, 59 pemain, 20 staf, dan 72 jadwal regular
-season. Sebanyak 24 hasil sampai Week 3 dikunci sebagai hasil aktual; 48 pertandingan
-tersisa disimulasikan. Simulasi default menjalankan 20.000 iterasi dengan random seed tetap,
+Snapshot data live 14 September 2026 berisi 9 tim, 61 pemain aktif, 20 staf aktif, dan 72
+jadwal regular season. Sebanyak 38 hasil sampai Week 5 dikunci sebagai hasil aktual; 34
+pertandingan tersisa disimulasikan. Simulasi default menjalankan 20.000 iterasi dengan
+random seed tetap,
 top enam regular season, lalu bracket delapan seri yang mengikuti struktur Season 15-17.
 Status format S18 saat ini `historical_assumption`; config wajib ditinjau lagi setelah
 aturan playoff resmi S18 tersedia.
 
-Probabilitas pertandingan tersisa dibekukan pada state data 31 Agustus 2026. Simulasi
+Probabilitas pertandingan tersisa dibekukan pada state setelah Week 5, berdasarkan data yang
+diverifikasi pada 14 September 2026. Simulasi
 memperbarui klasemen pada setiap iterasi, tetapi belum memperbarui ulang fitur Elo/form di
 dalam iterasi. Roster S18 sudah terintegrasi secara temporal, namun belum menjadi kolom
 fitur model match final versi 1.
@@ -291,6 +294,29 @@ Bracket playoff memakai konfigurasi deklaratif. Probabilitas seri referensi BO3 
 menjadi estimasi peluang per game, kemudian dihitung kembali sesuai BO5 atau BO7. Dengan
 demikian panjang seri sekarang memengaruhi probabilitas juara, tetapi konversi tersebut
 tetap merupakan asumsi model dan bukan probabilitas game yang dilatih secara terpisah.
+
+## Pembaruan data 14 September 2026
+
+Enam hasil Week 5 telah dicocokkan dengan [jadwal resmi MPL Indonesia](https://id-mpl.com/id/schedule):
+
+| Tanggal (WIB) | Pertandingan | Skor |
+| --- | --- | --- |
+| 11 September 2026 | GEEK vs ONIC | 2-1 |
+| 12 September 2026 | TLID vs BTR | 2-0 |
+| 12 September 2026 | AE vs RRQ | 2-0 |
+| 12 September 2026 | NAVI vs EVOS | 2-0 |
+| 13 September 2026 | GEEK vs TLID | 0-2 |
+| 13 September 2026 | ONIC vs AE | 0-2 |
+
+Hasil Week 1-4 tidak berubah. Jadwal terbaru juga mencatat penyesuaian pertandingan 1068
+dan 1075 serta beberapa waktu pertandingan mendatang. Arsip bertanggal tersedia di
+`data/season18/snapshots/2026-09-14/`; arsip sebelumnya tetap dipertahankan.
+
+Pada halaman roster resmi, SHANEE (DEWA), MAYKIDSS (GEEK), Excellent99 (RRQ), dan SamoHt
+(staf EVOS) pertama kali teramati pada pembaruan ini. KAYN (DEWA) dan BRAVO (staf EVOS)
+tidak lagi tercantum sehingga baris historisnya ditutup dengan `valid_to=2026-09-14`.
+Tanggal tersebut adalah tanggal observasi halaman, bukan klaim tanggal transfer resmi.
+Bundle dashboard sekarang mempunyai enam snapshot dari `S18_PRE` sampai `S18_W05`.
 
 ## Prinsip pengembangan
 

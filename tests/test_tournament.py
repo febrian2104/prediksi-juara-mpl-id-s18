@@ -99,13 +99,7 @@ def test_six_team_bracket_routes_winners_and_losers(season18_format: dict) -> No
     assert matches["lower_semifinal"]["team_b"] == 3
     assert matches["lower_final"]["team_a"] == 1
     assert matches["lower_final"]["team_b"] == 2
-    assert {5, 4}.isdisjoint(
-        {
-            match[side]
-            for match in trace[2:]
-            for side in ("team_a", "team_b")
-        }
-    )
+    assert {5, 4}.isdisjoint({match[side] for match in trace[2:] for side in ("team_a", "team_b")})
 
 
 def test_future_season_snapshot_ids_are_not_hard_coded() -> None:
@@ -123,5 +117,6 @@ def test_future_season_snapshot_ids_are_not_hard_coded() -> None:
         "S19_W02",
         "S19_W03",
         "S19_W04",
+        "S19_W05",
     ]
-    assert windows["available_result_count"].tolist() == [0, 8, 16, 24, 32]
+    assert windows["available_result_count"].tolist() == [0, 8, 16, 24, 32, 38]

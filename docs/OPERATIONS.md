@@ -31,24 +31,27 @@ Mengambil data S18 terbaru, membuat ulang seluruh snapshot pramusim/mingguan, da
 memperbarui explainability:
 
 ```bash
-./scripts/run_local_pipeline.sh update 2026-09-07
+./scripts/run_local_pipeline.sh update 2026-09-14
 ```
 
 Untuk membuat snapshot retrospektif pada akhir tanggal tertentu tanpa memundurkan tanggal
 roster, jalankan:
 
 ```bash
-make snapshot-season18 AS_OF=2026-09-07
-make update-predictions AS_OF=2026-09-07
+make snapshot-season18 AS_OF=2026-09-14
+make update-predictions AS_OF=2026-09-14
 make explain-season18
 ```
 
-Snapshot 7 September memakai 32 hasil sampai Week 4 dan menyisakan 40 pertandingan.
-Snapshot prediksi `S18_W04` memiliki cutoff 6 September (akhir Week 4); tanggal verifikasi
-sumbernya 7 September. Data bertanggal disimpan di `data/season18/snapshots/2026-09-07/`.
-Arsip 21 Agustus (Week 2 parsial) dan 31 Agustus (24 hasil sampai Week 3) dipertahankan.
-Pembaruan regular season 7 September tidak mengambil ulang roster; tanggal observasi roster
-tetap 1 September, dengan `valid_from` pertama 31 Agustus 2026.
+Snapshot 14 September memakai 38 hasil sampai Week 5 dan menyisakan 34 pertandingan.
+Snapshot prediksi `S18_W05` memiliki cutoff 13 September (akhir Week 5); tanggal verifikasi
+sumbernya 14 September. Data bertanggal disimpan di `data/season18/snapshots/2026-09-14/`.
+Arsip 21 dan 31 Agustus serta 7 September tetap dipertahankan untuk audit historis.
+
+Sinkronisasi roster mempertahankan `valid_from` anggota lama. Anggota yang baru pertama kali
+terlihat memakai tanggal observasi 14 September, sedangkan anggota yang hilang dari halaman
+resmi ditutup dengan `valid_to=2026-09-14`. Tanggal ini menunjukkan waktu observasi dan tidak
+selalu sama dengan tanggal perpindahan roster sebenarnya.
 
 Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 
@@ -59,7 +62,7 @@ Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 Menjalankan semuanya secara berurutan:
 
 ```bash
-./scripts/run_local_pipeline.sh all 2026-09-07
+./scripts/run_local_pipeline.sh all 2026-09-14
 ```
 
 Memvalidasi format regular season dan playoff aktif:
