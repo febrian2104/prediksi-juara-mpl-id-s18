@@ -20,7 +20,6 @@ season,team_id,team_name,organization_id,franchise_slot_id,nickname,player_key_r
 18,BTR,Bigetron by Vitality,BTR,MPLID_SLOT_BIGETRON,RUBENHOOD,rubenhood,rubenhood,PLY_RUBENHOOD_89F1FBBF,Asst. Coach,assistant_coach,staff,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/btr
 18,DEWA,Dewa United Esports,DEWA,MPLID_SLOT_DEWA,Hazle,hazle,hazle,PLY_HAZLE_AE7BC599,Jungle,jungler,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/dewa
 18,DEWA,Dewa United Esports,DEWA,MPLID_SLOT_DEWA,ITOSHI KESU,itoshikesu,itoshikesu,PLY_ITOSHIKESU_CD38D36D,Roam,roamer,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/dewa
-18,DEWA,Dewa United Esports,DEWA,MPLID_SLOT_DEWA,KAYN,kayn,kayn,PLY_KAYN_89A836F3,Jungle,jungler,player,2026-09-01,2026-08-31,2026-09-14,first_verified_on_official_page,https://id-mpl.com/en/team/dewa
 18,DEWA,Dewa United Esports,DEWA,MPLID_SLOT_DEWA,MAYBEEE,maybeee,maybeee,PLY_MAYBEEE_3D6079E4,Gold Lane,gold_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/dewa
 18,DEWA,Dewa United Esports,DEWA,MPLID_SLOT_DEWA,OCTA,octa,octa,PLY_OCTA_8BD7F200,Mid Lane,mid_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/dewa
 18,DEWA,Dewa United Esports,DEWA,MPLID_SLOT_DEWA,QINN,qinn,qinn,PLY_QINN_35C9EAEA,EXP Lane,exp_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/dewa
@@ -36,7 +35,6 @@ season,team_id,team_name,organization_id,franchise_slot_id,nickname,player_key_r
 18,EVOS,EVOS,EVOS,MPLID_SLOT_EVOS,Ryzaa,ryzaa,ryzaa,PLY_RYZAA_5533A2E9,Mid Lane,mid_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/evos
 18,EVOS,EVOS,EVOS,MPLID_SLOT_EVOS,VELL,vell,vell,PLY_VELL_ED58D5CA,EXP Lane,exp_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/evos
 18,EVOS,EVOS,EVOS,MPLID_SLOT_EVOS,ALDO,aldo,aldo,PLY_ALDO_7722ABA4,Coach,coach,staff,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/evos
-18,EVOS,EVOS,EVOS,MPLID_SLOT_EVOS,BRAVO,bravo,bravo,PLY_BRAVO_F144A690,Analyst,analyst,staff,2026-09-01,2026-08-31,2026-09-14,first_verified_on_official_page,https://id-mpl.com/en/team/evos
 18,EVOS,EVOS,EVOS,MPLID_SLOT_EVOS,SamoHt,samoht,samoht,PLY_SAMOHT_C5BD1AA8,Analyst,analyst,staff,2026-09-21,2026-09-14,,first_verified_on_official_page,https://id-mpl.com/en/team/evos
 18,GEEK,Geek Fam,GEEK,MPLID_SLOT_GEEK,ABOYY,aboyy,aboyy,PLY_ABOYY_DD685360,Mid Lane,mid_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/geek
 18,GEEK,Geek Fam,GEEK,MPLID_SLOT_GEEK,FEBRIII,febriii,febriii,PLY_FEBRIII_9E5CEBA3,EXP Lane,exp_lane,player,2026-09-21,2026-08-31,,first_verified_on_official_page,https://id-mpl.com/en/team/geek

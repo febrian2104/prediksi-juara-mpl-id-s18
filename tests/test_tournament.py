@@ -118,5 +118,6 @@ def test_future_season_snapshot_ids_are_not_hard_coded() -> None:
         "S19_W03",
         "S19_W04",
         "S19_W05",
+        "S19_W06",
     ]
-    assert windows["available_result_count"].tolist() == [0, 8, 16, 24, 32, 38]
+    assert windows["available_result_count"].tolist() == [0, 8, 16, 24, 32, 38, 47]
