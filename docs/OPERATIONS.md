@@ -31,22 +31,37 @@ Mengambil data S18 terbaru, membuat ulang seluruh snapshot pramusim/mingguan, da
 memperbarui explainability:
 
 ```bash
-./scripts/run_local_pipeline.sh update 2026-09-21
+./scripts/run_local_pipeline.sh update 2026-10-05
 ```
+
+Jika hanya memperbarui jadwal/skor dan mempertahankan roster bertanggal yang ada, gunakan:
+
+```bash
+.venv/bin/mpl-predictor sync-season18 --schedule-only --observed-at 2026-10-05
+make snapshot-season18 AS_OF=2026-10-05
+make update-predictions AS_OF=2026-10-05
+make explain-season18
+```
+
+Mode `--schedule-only` memerlukan `teams.csv` dan `rosters.csv` yang sudah tersedia.
+Sinkronisasi memvalidasi hasil sebelum menyimpan; jika ada blocking issue, data lama
+dipertahankan. Roster tidak diberi tanggal observasi baru oleh mode ini.
 
 Untuk membuat snapshot retrospektif pada akhir tanggal tertentu tanpa memundurkan tanggal
 roster, jalankan:
 
 ```bash
-make snapshot-season18 AS_OF=2026-09-21
-make update-predictions AS_OF=2026-09-21
+make snapshot-season18 AS_OF=2026-10-05
+make update-predictions AS_OF=2026-10-05
 make explain-season18
 ```
 
-Snapshot 21 September memakai 47 hasil sampai Week 6 dan menyisakan 25 pertandingan.
-Snapshot prediksi `S18_W06` memiliki cutoff 20 September (akhir Week 6); tanggal verifikasi
-sumbernya 21 September. Data bertanggal disimpan di `data/season18/snapshots/2026-09-21/`.
-Arsip 21 dan 31 Agustus serta 7 dan 14 September tetap dipertahankan untuk audit historis.
+Snapshot 5 Oktober memakai 55 hasil sampai Week 7 dan menyisakan 17 pertandingan.
+Snapshot prediksi `S18_W07` memiliki cutoff 4 Oktober (akhir Week 7); tanggal verifikasi
+skornya 5 Oktober. Data bertanggal disimpan di `data/season18/snapshots/2026-10-05/`.
+Arsip 21 dan 31 Agustus serta 7, 14, dan 21 September tetap dipertahankan untuk audit
+historis. Pembaruan 5 Oktober hanya mencakup jadwal/skor; roster terakhir diverifikasi
+pada 21 September.
 
 Sinkronisasi roster mempertahankan `valid_from` anggota lama. Anggota yang baru pertama kali
 terlihat memakai tanggal observasi terbaru, sedangkan anggota yang hilang dari halaman resmi
@@ -62,7 +77,7 @@ Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 Menjalankan semuanya secara berurutan:
 
 ```bash
-./scripts/run_local_pipeline.sh all 2026-09-21
+./scripts/run_local_pipeline.sh all 2026-10-05
 ```
 
 Memvalidasi format regular season dan playoff aktif:
@@ -113,6 +128,11 @@ ketika halaman dibuka. Jika output belum lengkap, dashboard menampilkan command 
 yang perlu dijalankan. Tab `Perbandingan model` membaca
 `reports/model_evaluation_report.json`; jalankan `make backtest` setelah mengubah kandidat
 atau hyperparameter model.
+
+Navigasi atas memisahkan halaman `Regular Season` dan `Playoff`. Bagan playoff dibangun dari
+`config/simulation_config.json`, sehingga perubahan format harus dilakukan pada konfigurasi
+dan divalidasi dengan `make validate-season-config`. Sebelum regular season selesai, seed
+yang tampil merupakan proyeksi dari snapshot yang dipilih.
 
 Untuk deployment Streamlit Community Cloud, isi **Main file path** dengan:
 

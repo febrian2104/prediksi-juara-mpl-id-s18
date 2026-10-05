@@ -216,6 +216,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Observation date in YYYY-MM-DD; defaults to today.",
     )
     season18_parser.add_argument("--player-aliases", type=Path, default=None)
+    season18_parser.add_argument(
+        "--schedule-only",
+        action="store_true",
+        help="Refresh schedule/results while retaining existing teams and dated roster history.",
+    )
     season18_parser.add_argument("--output-dir", type=Path, default=None)
     season18_parser.add_argument("--report", type=Path, default=None)
 
@@ -656,23 +661,37 @@ def main(argv: Sequence[str] | None = None) -> int:
         ).resolve()
         output_dir = (args.output_dir or paths.data / "season18").resolve()
         report_path = (args.report or paths.reports / "season18_data_report.json").resolve()
-        player_aliases = load_player_alias_overrides(alias_path)
-        teams = build_season18_teams()
+        if args.schedule_only:
+            for filename in ("teams.csv", "rosters.csv"):
+                if not (output_dir / filename).exists():
+                    parser.error(f"--schedule-only requires existing {output_dir / filename}")
+            teams = pd.read_csv(output_dir / "teams.csv")
+            rosters = pd.read_csv(output_dir / "rosters.csv")
+        else:
+            teams = build_season18_teams()
         schedule = parse_schedule_html(
             fetch_official_html("https://id-mpl.com/id/schedule"), observed_at
         )
-        roster_frames = []
-        for team_id, metadata in TEAM_METADATA.items():
-            url = f"https://id-mpl.com/en/team/{metadata['slug']}"
-            roster_frames.append(
-                parse_roster_html(fetch_official_html(url), team_id, observed_at, player_aliases)
-            )
-        rosters = pd.concat(roster_frames, ignore_index=True)
-        existing_roster_path = output_dir / "rosters.csv"
-        if existing_roster_path.exists():
-            existing_rosters = pd.read_csv(existing_roster_path)
-            rosters = merge_roster_history(existing_rosters, rosters, observed_at)
+        if not args.schedule_only:
+            player_aliases = load_player_alias_overrides(alias_path)
+            roster_frames = []
+            for team_id, metadata in TEAM_METADATA.items():
+                url = f"https://id-mpl.com/en/team/{metadata['slug']}"
+                roster_frames.append(
+                    parse_roster_html(
+                        fetch_official_html(url), team_id, observed_at, player_aliases
+                    )
+                )
+            rosters = pd.concat(roster_frames, ignore_index=True)
+            existing_roster_path = output_dir / "rosters.csv"
+            if existing_roster_path.exists():
+                existing_rosters = pd.read_csv(existing_roster_path)
+                rosters = merge_roster_history(existing_rosters, rosters, observed_at)
         report = build_season18_report(teams, rosters, schedule, observed_at)
+        report["sync_scope"] = "schedule_only" if args.schedule_only else "teams_rosters_schedule"
+        if report["blocking_issue_count"]:
+            print(f"Blocking issues: {report['blocking_issue_count']}; existing data retained.")
+            return 1
         write_season18_outputs(teams, rosters, schedule, report, output_dir, report_path)
         print("MPL Indonesia Season 18 official data integration")
         print(f"Observation date: {observed_at.isoformat()}")

@@ -19,12 +19,14 @@ dashboard agar hasil eksperimen dapat direproduksi.
   evaluasi kalibrasi sudah tersedia.
 - Model final terkalibrasi sudah dilatih ulang pada Season 4-17.
 - Tim, roster bertanggal, jadwal, dan hasil resmi Season 18 sudah diintegrasikan dengan
-  snapshot 21 September 2026.
+  snapshot skor 5 Oktober 2026; roster terakhir diverifikasi pada 21 September 2026.
 - Simulasi Monte Carlo regular season dan playoff Season 18 sudah tersedia.
-- Rekonstruksi pramusim serta pembaruan Week 1-6 sampai 21 September 2026 sudah tersedia
+- Rekonstruksi pramusim serta pembaruan Week 1-7 sampai 5 Oktober 2026 sudah tersedia
   dengan cutoff leakage-safe untuk bundle deployment saat ini.
 - Explainability global/lokal, dashboard interaktif, dan otomasi pipeline lokal sudah
   tersedia tanpa GitHub Actions.
+- Dashboard memisahkan halaman `Regular Season` dan `Playoff`; halaman playoff menampilkan
+  bagan upper/lower bracket yang mengikuti konfigurasi simulasi.
 - Inti simulasi sudah season-agnostic. Format playoff disimpan sebagai bracket deklaratif,
   divalidasi sebelum simulasi, dan tidak boleh diwariskan ke season baru tanpa konfirmasi.
 
@@ -93,7 +95,7 @@ make models
 make season18
 make validate-season-config
 make verify
-make local-pipeline OBSERVED_AT=2026-09-21
+make local-pipeline OBSERVED_AT=2026-10-05
 make test
 make lint
 make dashboard
@@ -276,16 +278,17 @@ di-reset pada awal setiap season. Accuracy tetap 66,17%, sedangkan Brier score t
 0,220528 menjadi 0,220427 dan log loss turun dari 0,632517 menjadi 0,632215. Perbaikannya
 kecil, sehingga lapisan ini hanya mengoreksi confidence dan tidak menggantikan model utama.
 
-Snapshot data live 21 September 2026 berisi 9 tim, 64 pemain aktif, 20 staf aktif, dan 72
-jadwal regular season. Sebanyak 47 hasil sampai Week 6 dikunci sebagai hasil aktual; 25
+Snapshot skor 5 Oktober 2026 berisi 9 tim dan 72 jadwal regular season. Roster tetap memakai
+64 pemain aktif dan 20 staf aktif yang terakhir diverifikasi pada 21 September.
+Sebanyak 55 hasil sampai Week 7 dikunci sebagai hasil aktual; 17
 pertandingan tersisa disimulasikan. Simulasi default menjalankan 20.000 iterasi dengan
 random seed tetap, top enam regular season, lalu bracket delapan seri yang mengikuti
 struktur Season 15-17.
 Status format S18 saat ini `historical_assumption`; config wajib ditinjau lagi setelah
 aturan playoff resmi S18 tersedia.
 
-Probabilitas pertandingan tersisa dibekukan pada state setelah Week 6, berdasarkan data yang
-diverifikasi pada 21 September 2026. Simulasi
+Probabilitas pertandingan tersisa dibekukan pada state setelah Week 7, berdasarkan skor yang
+diverifikasi pada 5 Oktober 2026. Simulasi
 memperbarui klasemen pada setiap iterasi, tetapi belum memperbarui ulang fitur Elo/form di
 dalam iterasi. Roster S18 sudah terintegrasi secara temporal, namun belum menjadi kolom
 fitur model match final versi 1.
@@ -294,6 +297,40 @@ Bracket playoff memakai konfigurasi deklaratif. Probabilitas seri referensi BO3 
 menjadi estimasi peluang per game, kemudian dihitung kembali sesuai BO5 atau BO7. Dengan
 demikian panjang seri sekarang memengaruhi probabilitas juara, tetapi konversi tersebut
 tetap merupakan asumsi model dan bukan probabilitas game yang dilatih secara terpisah.
+
+Dashboard menyediakan dua halaman melalui navigasi utama. `Regular Season` memuat ringkasan,
+prediksi pertandingan, akurasi, perbandingan model, dan explainability. `Playoff` menampilkan
+Bracet 6 tim yang dibentuk langsung dari `config/simulation_config.json`, lengkap dengan
+jalur upper/lower bracket dan format BO5/BO7. Selama regular season belum selesai, peserta
+dan seed pada bagan adalah proyeksi berdasarkan ekspektasi ranking simulasi, bukan hasil
+playoff resmi.
+
+## Pembaruan skor 5 Oktober 2026
+
+Delapan hasil Week 7 telah dicocokkan dengan [jadwal resmi MPL Indonesia](https://id-mpl.com/id/schedule)
+dan [MLBBHub](https://mlbbhub.com/mpl/id/schedule):
+
+| Tanggal (WIB) | Pertandingan | Skor |
+| --- | --- | --- |
+| 2 Oktober 2026 | GEEK vs BTR | 1-2 |
+| 2 Oktober 2026 | DEWA vs TLID | 2-1 |
+| 3 Oktober 2026 | AE vs NAVI | 1-2 |
+| 3 Oktober 2026 | BTR vs RRQ | 2-1 |
+| 3 Oktober 2026 | GEEK vs DEWA | 2-1 |
+| 4 Oktober 2026 | AE vs TLID | 0-2 |
+| 4 Oktober 2026 | RRQ vs EVOS | 2-1 |
+| 4 Oktober 2026 | ONIC vs NAVI | 2-1 |
+
+Hasil Week 1-6 dan jadwal mendatang tetap sama dengan arsip 21 September. Roster tidak
+disinkronkan ulang pada pembaruan skor ini; tanggal verifikasi roster tetap dipertahankan.
+Arsip baru tersedia di `data/season18/snapshots/2026-10-05/`, sementara arsip lama tetap
+tersimpan. Bundle dashboard memiliki delapan snapshot dari `S18_PRE` sampai `S18_W07`,
+dengan cutoff prediksi terakhir 4 Oktober dan tanggal verifikasi sumber 5 Oktober.
+
+Setelah simulasi 20.000 iterasi, favorit juara adalah TLID (40,52%), NAVI (24,69%), dan
+ONIC (13,70%). Evaluasi pre-match menghasilkan 32 prediksi benar dari 55 pertandingan
+(58,18%); seluruh 55 hasil telah memperbarui state tim dan kalibrasi online sesudah
+prediksi masing-masing dihitung.
 
 ## Pembaruan data 21 September 2026
 
@@ -318,7 +355,8 @@ dipertahankan.
 Pada halaman roster resmi, EgaTzy (EVOS), Killuaa (ONIC), dan Faviannn (RRQ) pertama kali
 teramati pada pembaruan ini. Tidak ada anggota aktif yang ditutup pada observasi 21
 September. Tanggal tersebut adalah tanggal observasi halaman, bukan klaim tanggal transfer
-resmi. Bundle dashboard sekarang mempunyai tujuh snapshot dari `S18_PRE` sampai `S18_W06`.
+resmi. Pada pembaruan 21 September, bundle dashboard mempunyai tujuh snapshot dari
+`S18_PRE` sampai `S18_W06`.
 
 ## Prinsip pengembangan
 

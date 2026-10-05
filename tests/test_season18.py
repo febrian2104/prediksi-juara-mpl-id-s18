@@ -1,3 +1,5 @@
+import json
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -5,8 +7,13 @@ import pandas as pd
 import pytest
 
 from mpl_predictor.analysis.common import load_canonical_tables
+from mpl_predictor.cli import main as cli_main
 from mpl_predictor.config import get_project_paths
-from mpl_predictor.dashboard import load_dashboard_data
+from mpl_predictor.dashboard import (
+    build_playoff_bracket_figure,
+    build_projected_playoff_seeds,
+    load_dashboard_data,
+)
 from mpl_predictor.data.season18 import (
     build_season18_asof_snapshot,
     build_season18_report,
@@ -42,6 +49,8 @@ SEASON18_DIR = PROJECT_ROOT / "data" / "season18"
 AUGUST_31_DIR = SEASON18_DIR / "snapshots" / "2026-08-31"
 SEPTEMBER_7_DIR = SEASON18_DIR / "snapshots" / "2026-09-07"
 SEPTEMBER_14_DIR = SEASON18_DIR / "snapshots" / "2026-09-14"
+SEPTEMBER_21_DIR = SEASON18_DIR / "snapshots" / "2026-09-21"
+OCTOBER_5_DIR = SEASON18_DIR / "snapshots" / "2026-10-05"
 CANONICAL_DIR = PROJECT_ROOT / "data" / "processed" / "canonical"
 
 
@@ -61,7 +70,7 @@ def _load_season18(
 
 def test_official_season18_snapshot_is_complete_and_time_guarded() -> None:
     teams, rosters, schedule = _load_season18()
-    observed_at = date(2026, 9, 21)
+    observed_at = date(2026, 10, 5)
     checks = validate_season18_data(teams, rosters, schedule, observed_at)
     report = build_season18_report(teams, rosters, schedule, observed_at)
 
@@ -73,8 +82,8 @@ def test_official_season18_snapshot_is_complete_and_time_guarded() -> None:
     assert active_rosters["member_type"].eq("staff").sum() == 20
     assert set(rosters["valid_from"]) == {"2026-08-31", "2026-09-14", "2026-09-21"}
     assert len(schedule) == 72
-    assert schedule["status"].eq("completed").sum() == 47
-    assert schedule["status"].eq("scheduled").sum() == 25
+    assert schedule["status"].eq("completed").sum() == 55
+    assert schedule["status"].eq("scheduled").sum() == 17
     assert schedule["observed_at"].eq(observed_at.isoformat()).all()
     assert all(check["status"] == "pass" for check in checks)
     assert report["blocking_issue_count"] == 0
@@ -91,7 +100,7 @@ def test_official_season18_snapshot_is_complete_and_time_guarded() -> None:
 
 
 def test_week_six_results_preserve_prior_results_and_hide_future_outcomes() -> None:
-    _, _, schedule = _load_season18()
+    _, _, schedule = _load_season18(SEPTEMBER_21_DIR)
     _, _, archived = _load_season18(SEPTEMBER_14_DIR)
     week_six = schedule.loc[schedule["week"].eq(6)].sort_values("official_match_id")
 
@@ -147,6 +156,104 @@ def test_week_six_results_preserve_prior_results_and_hide_future_outcomes() -> N
     for match_id, (week, scheduled_at) in expected_schedule.items():
         assert rescheduled.loc[match_id, "week"] == week
         assert rescheduled.loc[match_id, "scheduled_at"] == pd.Timestamp(scheduled_at)
+
+
+def test_week_seven_results_preserve_prior_results_and_hide_future_outcomes() -> None:
+    _, _, schedule = _load_season18()
+    _, _, archived = _load_season18(SEPTEMBER_21_DIR)
+    _, _, snapshot = _load_season18(OCTOBER_5_DIR)
+    week_seven = schedule.loc[schedule["week"].eq(7)].sort_values("official_match_id")
+
+    assert week_seven["official_match_id"].tolist() == list(range(1084, 1092))
+    assert week_seven["status"].eq("completed").all()
+    assert list(
+        week_seven[
+            ["team_a_id", "team_b_id", "team_a_score", "team_b_score", "winner_team_id"]
+        ].itertuples(index=False, name=None)
+    ) == [
+        ("GEEK", "BTR", 1, 2, "BTR"),
+        ("DEWA", "TLID", 2, 1, "DEWA"),
+        ("AE", "NAVI", 1, 2, "NAVI"),
+        ("BTR", "RRQ", 2, 1, "BTR"),
+        ("GEEK", "DEWA", 2, 1, "GEEK"),
+        ("AE", "TLID", 0, 2, "TLID"),
+        ("RRQ", "EVOS", 2, 1, "RRQ"),
+        ("ONIC", "NAVI", 2, 1, "ONIC"),
+    ]
+    columns = [column for column in schedule.columns if column != "observed_at"]
+    old_completed = archived.loc[archived["status"].eq("completed"), "official_match_id"]
+    pd.testing.assert_frame_equal(
+        schedule.loc[schedule["official_match_id"].isin(old_completed), columns].reset_index(
+            drop=True
+        ),
+        archived.loc[archived["official_match_id"].isin(old_completed), columns].reset_index(
+            drop=True
+        ),
+    )
+    pd.testing.assert_frame_equal(schedule[columns], snapshot[columns])
+    future = schedule.loc[schedule["week"].gt(7)]
+    assert len(future) == 17
+    assert future["status"].eq("scheduled").all()
+    assert (
+        future[["team_a_score", "team_b_score", "winner_team_id", "winner_side"]].isna().all().all()
+    )
+    pd.testing.assert_frame_equal(
+        future[columns].reset_index(drop=True),
+        archived.loc[archived["week"].gt(7), columns].reset_index(drop=True),
+    )
+
+
+@pytest.mark.parametrize("invalid", [None, "invalid_score", "future_result"])
+def test_schedule_only_sync_retains_roster_and_rejects_invalid_results(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid: str | None
+) -> None:
+    for filename in ("teams.csv", "rosters.csv", "schedule_results.csv"):
+        shutil.copyfile(SEPTEMBER_21_DIR / filename, tmp_path / filename)
+    original = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+    _, _, updated_schedule = _load_season18()
+    if invalid == "invalid_score":
+        updated_schedule.loc[updated_schedule["official_match_id"].eq(1084), "team_a_score"] = 2
+    elif invalid == "future_result":
+        updated_schedule.loc[updated_schedule["official_match_id"].eq(1084), "scheduled_at"] = (
+            pd.Timestamp("2026-10-06 15:00:00", tz="Asia/Jakarta")
+        )
+    fetched_urls = []
+
+    def fetch(url: str) -> str:
+        fetched_urls.append(url)
+        return "schedule"
+
+    monkeypatch.setattr("mpl_predictor.cli.fetch_official_html", fetch)
+    monkeypatch.setattr(
+        "mpl_predictor.cli.parse_schedule_html", lambda html, observed_at: updated_schedule
+    )
+    report_path = tmp_path / "report.json"
+    result = cli_main(
+        [
+            "sync-season18",
+            "--schedule-only",
+            "--observed-at",
+            "2026-10-05",
+            "--output-dir",
+            str(tmp_path),
+            "--report",
+            str(report_path),
+        ]
+    )
+
+    assert fetched_urls == ["https://id-mpl.com/id/schedule"]
+    assert (tmp_path / "teams.csv").read_bytes() == original["teams.csv"]
+    assert (tmp_path / "rosters.csv").read_bytes() == original["rosters.csv"]
+    if invalid:
+        assert result == 1
+        assert (tmp_path / "schedule_results.csv").read_bytes() == original["schedule_results.csv"]
+        assert not report_path.exists()
+    else:
+        assert result == 0
+        report = json.loads(report_path.read_text())
+        assert report["sync_scope"] == "schedule_only"
+        assert report["scope"]["completed_match_count"] == 55
+        assert report["temporal_policy"]["roster_observed_at"] == ["2026-09-21"]
 
 
 def test_roster_update_preserves_history_and_dates_new_observations() -> None:
@@ -235,6 +342,7 @@ def test_preseason_and_weekly_windows_hide_future_results() -> None:
         "S18_W04",
         "S18_W05",
         "S18_W06",
+        "S18_W07",
     ]
     assert windows["feature_cutoff_date"].astype(str).tolist() == [
         "2026-08-13",
@@ -244,6 +352,7 @@ def test_preseason_and_weekly_windows_hide_future_results() -> None:
         "2026-09-06",
         "2026-09-13",
         "2026-09-20",
+        "2026-10-04",
     ]
     expected_completed = {
         "S18_PRE": 0,
@@ -253,6 +362,7 @@ def test_preseason_and_weekly_windows_hide_future_results() -> None:
         "S18_W04": 32,
         "S18_W05": 38,
         "S18_W06": 47,
+        "S18_W07": 55,
     }
     for _, window in windows.iterrows():
         snapshot = schedule_as_of_window(schedule, window)
@@ -343,8 +453,8 @@ def test_final_model_is_symmetric_and_s18_results_are_fixed(final_simulation_inp
     )
     completed = probabilities.loc[probabilities["status"].eq("completed")]
     scheduled = probabilities.loc[probabilities["status"].eq("scheduled")]
-    assert completed["online_learning_observation_count"].tolist() == list(range(47))
-    assert scheduled["online_learning_observation_count"].eq(47).all()
+    assert completed["online_learning_observation_count"].tolist() == list(range(55))
+    assert scheduled["online_learning_observation_count"].eq(55).all()
     assert completed["online_learning_update_applied"].all()
     assert scheduled["online_learning_update_applied"].eq(False).all()
     assert completed.iloc[0]["team_a_win_probability"] == pytest.approx(
@@ -372,7 +482,7 @@ def test_final_model_is_symmetric_and_s18_results_are_fixed(final_simulation_inp
     assert scheduled["result_update_status"].eq("awaiting_result").all()
 
     accuracy = build_match_accuracy_metrics(probabilities)
-    assert accuracy["evaluated_match_count"] == 47
+    assert accuracy["evaluated_match_count"] == 55
     assert accuracy["correct_prediction_count"] == int(expected_correct.sum())
     assert accuracy["incorrect_prediction_count"] == int((~expected_correct).sum())
     assert accuracy["match_accuracy"] == pytest.approx(expected_correct.mean())
@@ -381,17 +491,17 @@ def test_final_model_is_symmetric_and_s18_results_are_fixed(final_simulation_inp
 
     learning = build_online_learning_summary(probabilities)
     assert learning["enabled"] is True
-    assert learning["update_count"] == 47
-    assert learning["final_observation_count"] == 47
+    assert learning["update_count"] == 55
+    assert learning["final_observation_count"] == 55
     assert 0.5 <= learning["final_confidence_scale"] <= 2.0
     assert learning["adaptive_prequential_metrics"] == accuracy
 
 
-def test_week_six_results_do_not_change_past_pre_match_predictions(
+def test_week_seven_results_do_not_change_past_pre_match_predictions(
     final_simulation_inputs,
 ) -> None:
     tables, teams, _, artifact, current, _, _ = final_simulation_inputs
-    _, _, archived_schedule = _load_season18(SEPTEMBER_14_DIR)
+    _, _, archived_schedule = _load_season18(SEPTEMBER_21_DIR)
     feature_config = load_feature_config(PROJECT_ROOT / "config" / "feature_config.json")
     archived, _, _ = build_season18_match_probabilities(
         tables, archived_schedule, teams, feature_config, artifact
@@ -406,7 +516,7 @@ def test_week_six_results_do_not_change_past_pre_match_predictions(
         "prediction_correct",
     ]
     historical_ids = archived.loc[archived["status"].eq("completed"), "official_match_id"]
-    assert len(historical_ids) == 38
+    assert len(historical_ids) == 47
     pd.testing.assert_frame_equal(
         current.loc[current["official_match_id"].isin(historical_ids), audit_columns]
         .sort_values("official_match_id")
@@ -499,15 +609,15 @@ def test_season18_simulation_is_reproducible_and_normalized(final_simulation_inp
 def test_explainability_and_dashboard_outputs_are_loadable(final_simulation_inputs) -> None:
     _, _, _, artifact, probabilities, _, _ = final_simulation_inputs
     probabilities = probabilities.copy()
-    probabilities["snapshot_id"] = "S18_W06"
-    probabilities["snapshot_order"] = 6
+    probabilities["snapshot_id"] = "S18_W07"
+    probabilities["snapshot_order"] = 7
     global_importance = build_global_importance(artifact)
     local = build_match_explanations(artifact, probabilities)
     dashboard_data, missing = load_dashboard_data(get_project_paths(PROJECT_ROOT))
 
     assert len(global_importance) == 28
     assert global_importance["absolute_importance"].is_monotonic_decreasing
-    assert local["match_id"].nunique() == 25
+    assert local["match_id"].nunique() == 17
     assert local.groupby("match_id")["contribution_rank"].min().eq(1).all()
     assert missing == []
     assert set(dashboard_data["model_comparison"]["model_family"]) == {
@@ -535,6 +645,27 @@ def test_explainability_and_dashboard_outputs_are_loadable(final_simulation_inpu
         "S18_W04",
         "S18_W05",
         "S18_W06",
+        "S18_W07",
     }
     sums = dashboard_data["predictions"].groupby("snapshot_id")["champion_probability"].sum()
     assert sums.sub(1.0).abs().lt(1e-9).all()
+
+
+def test_playoff_dashboard_builds_six_unique_seeds_and_complete_bracket() -> None:
+    dashboard_data, missing = load_dashboard_data(get_project_paths(PROJECT_ROOT))
+    predictions = dashboard_data["predictions"]
+    latest_snapshot = predictions.loc[predictions["snapshot_order"].idxmax(), "snapshot_id"]
+    projected = build_projected_playoff_seeds(predictions, latest_snapshot)
+    figure = build_playoff_bracket_figure(projected, dashboard_data["simulation_config"])
+
+    assert missing == []
+    assert projected["projected_seed"].tolist() == [1, 2, 3, 4, 5, 6]
+    assert projected["team_id"].nunique() == 6
+    assert projected["expected_regular_rank"].is_monotonic_increasing
+    assert projected["projected_seed_probability"].between(0, 1).all()
+    assert len(dashboard_data["simulation_config"]["playoffs"]["bracket"]) == 8
+    assert len(figure.layout.shapes) == 52
+    annotation_text = {annotation.text for annotation in figure.layout.annotations}
+    assert "<b>Upper Bracket Quarterfinals</b>" in annotation_text
+    assert "<b>Lower Bracket Final</b>" in annotation_text
+    assert "<b>Grand Final</b>" in annotation_text
