@@ -664,8 +664,40 @@ def test_playoff_dashboard_builds_six_unique_seeds_and_complete_bracket() -> Non
     assert projected["expected_regular_rank"].is_monotonic_increasing
     assert projected["projected_seed_probability"].between(0, 1).all()
     assert len(dashboard_data["simulation_config"]["playoffs"]["bracket"]) == 8
-    assert len(figure.layout.shapes) == 52
     annotation_text = {annotation.text for annotation in figure.layout.annotations}
     assert "<b>Upper Bracket Quarterfinals</b>" in annotation_text
     assert "<b>Lower Bracket Final</b>" in annotation_text
     assert "<b>Grand Final</b>" in annotation_text
+    assert "Kalah → LB Semifinal" in annotation_text
+    assert "Kalah → LB Final" in annotation_text
+
+    shapes = figure.layout.shapes
+    cards = [shape for shape in shapes if shape.name and shape.name.startswith("match-")]
+    assert {card.name for card in cards} == {
+        f"match-{match['match_id']}"
+        for match in dashboard_data["simulation_config"]["playoffs"]["bracket"]
+    }
+    for match in dashboard_data["simulation_config"]["playoffs"]["bracket"]:
+        for side in ("team_a", "team_b"):
+            participant = match[side]
+            if participant["source"] == "seed":
+                continue
+            prefix = "transfer" if participant["source"] == "loser" else "connector"
+            edge = f"{prefix}-{participant['match_id']}-{match['match_id']}-{side}"
+            assert any(shape.name and shape.name.startswith(edge) for shape in shapes)
+
+    # Every route must stay outside card interiors, including the destination card.
+    tolerance = 1e-9
+    for line in shapes:
+        if not line.name or not line.name.startswith(("connector-", "transfer-")):
+            continue
+        for card in cards:
+            if line.x0 == line.x1:
+                crosses = card.x0 + tolerance < line.x0 < card.x1 - tolerance and max(
+                    min(line.y0, line.y1), card.y0 + tolerance
+                ) < min(max(line.y0, line.y1), card.y1 - tolerance)
+            else:
+                crosses = card.y0 + tolerance < line.y0 < card.y1 - tolerance and max(
+                    min(line.x0, line.x1), card.x0 + tolerance
+                ) < min(max(line.x0, line.x1), card.x1 - tolerance)
+            assert not crosses, f"{line.name} crosses {card.name}"

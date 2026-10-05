@@ -245,6 +245,7 @@ def build_playoff_bracket_figure(
         team_b, team_b_detail = participant_label(match["team_b"])
         figure.add_shape(
             type="rect",
+            name=f"match-{match_id}",
             x0=x - half_width,
             x1=x + half_width,
             y0=y - half_height,
@@ -309,25 +310,27 @@ def build_playoff_bracket_figure(
         source: str,
         target: str,
         *,
-        source_offset: float = 0.0,
         target_offset: float = 0.0,
-        lane: float | None = None,
+        target_side: str,
         color: str = "#71717a",
     ) -> None:
         source_x, source_y = positions[source]
         target_x, target_y = positions[target]
         start_x = source_x + half_width
         end_x = target_x - half_width
-        bend_x = lane if lane is not None else (start_x + end_x) / 2
-        start_y = source_y + source_offset
+        bend_x = (start_x + end_x) / 2
+        start_y = source_y
         end_y = target_y + target_offset
-        for x0, y0, x1, y1 in (
-            (start_x, start_y, bend_x, start_y),
-            (bend_x, start_y, bend_x, end_y),
-            (bend_x, end_y, end_x, end_y),
+        for segment, (x0, y0, x1, y1) in enumerate(
+            (
+                (start_x, start_y, bend_x, start_y),
+                (bend_x, start_y, bend_x, end_y),
+                (bend_x, end_y, end_x, end_y),
+            )
         ):
             figure.add_shape(
                 type="line",
+                name=f"connector-{source}-{target}-{target_side}-{segment}",
                 x0=x0,
                 x1=x1,
                 y0=y0,
@@ -339,28 +342,42 @@ def build_playoff_bracket_figure(
     upper_color = "#60a5fa"
     lower_color = "#f59e0b"
     final_color = "#facc15"
-    add_connector("play_in_1", "upper_semifinal_1", target_offset=-0.26, color=upper_color)
-    add_connector("play_in_2", "upper_semifinal_2", target_offset=-0.26, color=upper_color)
-    add_connector("upper_semifinal_1", "upper_final", target_offset=0.26, color=upper_color)
-    add_connector("upper_semifinal_2", "upper_final", target_offset=-0.26, color=upper_color)
-    add_connector(
-        "upper_semifinal_1",
-        "lower_semifinal",
-        target_offset=0.26,
-        lane=5.75,
-        color=lower_color,
-    )
-    add_connector(
-        "upper_semifinal_2",
-        "lower_semifinal",
-        target_offset=-0.26,
-        lane=5.95,
-        color=lower_color,
-    )
-    add_connector("upper_final", "lower_final", target_offset=0.26, color=lower_color)
-    add_connector("lower_semifinal", "lower_final", target_offset=-0.26, color=lower_color)
-    add_connector("upper_final", "grand_final", target_offset=0.26, color=final_color)
-    add_connector("lower_final", "grand_final", target_offset=-0.26, color=final_color)
+    for target, match in bracket.items():
+        for side, offset in (("team_a", 0.26), ("team_b", -0.26)):
+            participant = match[side]
+            if participant["source"] == "seed":
+                continue
+            source = str(participant["match_id"])
+            if participant["source"] == "loser":
+                # Reference transfers keep same-column lower-bracket routes off the cards.
+                x, y = positions[source]
+                bottom = y - half_height
+                figure.add_shape(
+                    type="line",
+                    name=f"transfer-{source}-{target}-{side}",
+                    x0=x,
+                    x1=x,
+                    y0=bottom,
+                    y1=bottom - 0.22,
+                    line={"color": lower_color, "width": 1.5, "dash": "dot"},
+                    layer="below",
+                )
+                figure.add_annotation(
+                    x=x,
+                    y=bottom - 0.42,
+                    text=f"Kalah → {short_match_labels[target]}",
+                    showarrow=False,
+                    font={"size": 10, "color": lower_color},
+                )
+                continue
+            color = (
+                final_color
+                if target == "grand_final"
+                else lower_color
+                if target.startswith("lower_")
+                else upper_color
+            )
+            add_connector(source, target, target_offset=offset, target_side=side, color=color)
 
     figure.update_layout(
         height=650,
@@ -482,6 +499,9 @@ def _render_matches(data: dict[str, Any], snapshot_id: str) -> None:
     if current.empty:
         st.info("Tidak ada pertandingan untuk filter ini pada snapshot yang dipilih.")
         return
+    current = current.sort_values(
+        ["week", "scheduled_at", "official_match_id"], ascending=[False, False, False]
+    ).reset_index(drop=True)
     current["accuracy_label"] = current["accuracy_status"].map(
         {
             "correct": "✅ Benar",
@@ -750,7 +770,8 @@ def _render_playoff_page(data: dict[str, Any], snapshot_id: str) -> None:
     st.caption(
         "Persentase pada slot seed adalah peluang tim finis tepat pada seed tersebut. "
         "Garis biru menunjukkan jalur upper bracket, oranye jalur lower bracket, dan kuning "
-        "jalur menuju Grand Final."
+        "jalur menuju Grand Final. Penanda 'Kalah →' menunjukkan perpindahan ke lower bracket; "
+        "slot tujuan mencantumkan pertandingan asal tim."
     )
     bracket_figure = build_playoff_bracket_figure(projected_seeds, data["simulation_config"])
     st.plotly_chart(

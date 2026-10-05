@@ -20,6 +20,15 @@ def test_streamlit_default_page_renders_regular_season() -> None:
     assert not app.exception
     assert app.title[0].value == "MPL Indonesia Season 18 · Regular Season"
     assert app.sidebar.selectbox[0].value == "S18_W07"
+    for match_filter in ("Selesai", "Semua", "Akan datang"):
+        app.radio[0].set_value(match_filter).run(timeout=30)
+        assert not app.exception
+        table = next(
+            element.value for element in app.dataframe if "Status akurasi" in element.value.columns
+        )
+        assert table["Week"].is_monotonic_decreasing
+        for _, week_rows in table.groupby("Week"):
+            assert week_rows["Jadwal"].is_monotonic_decreasing
 
 
 def test_streamlit_playoff_page_renders_bracket() -> None:
