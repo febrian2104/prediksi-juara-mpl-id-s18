@@ -31,15 +31,15 @@ Mengambil data S18 terbaru, membuat ulang seluruh snapshot pramusim/mingguan, da
 memperbarui explainability:
 
 ```bash
-./scripts/run_local_pipeline.sh update 2026-10-05
+./scripts/run_local_pipeline.sh update 2026-10-12
 ```
 
 Jika hanya memperbarui jadwal/skor dan mempertahankan roster bertanggal yang ada, gunakan:
 
 ```bash
-.venv/bin/mpl-predictor sync-season18 --schedule-only --observed-at 2026-10-05
-make snapshot-season18 AS_OF=2026-10-05
-make update-predictions AS_OF=2026-10-05
+.venv/bin/mpl-predictor sync-season18 --schedule-only --observed-at 2026-10-12
+make snapshot-season18 AS_OF=2026-10-12
+make update-predictions AS_OF=2026-10-12
 make explain-season18
 ```
 
@@ -51,17 +51,17 @@ Untuk membuat snapshot retrospektif pada akhir tanggal tertentu tanpa memundurka
 roster, jalankan:
 
 ```bash
-make snapshot-season18 AS_OF=2026-10-05
-make update-predictions AS_OF=2026-10-05
+make snapshot-season18 AS_OF=2026-10-12
+make update-predictions AS_OF=2026-10-12
 make explain-season18
 ```
 
-Snapshot 5 Oktober memakai 55 hasil sampai Week 7 dan menyisakan 17 pertandingan.
-Snapshot prediksi `S18_W07` memiliki cutoff 4 Oktober (akhir Week 7); tanggal verifikasi
-skornya 5 Oktober. Data bertanggal disimpan di `data/season18/snapshots/2026-10-05/`.
-Arsip 21 dan 31 Agustus serta 7, 14, dan 21 September tetap dipertahankan untuk audit
-historis. Pembaruan 5 Oktober hanya mencakup jadwal/skor; roster terakhir diverifikasi
-pada 21 September.
+Snapshot 12 Oktober memakai 64 hasil sampai Week 8 dan menyisakan 8 pertandingan.
+Snapshot prediksi `S18_W08` memiliki cutoff 11 Oktober (akhir Week 8); tanggal verifikasi
+sumbernya 12 Oktober. Data bertanggal disimpan di `data/season18/snapshots/2026-10-12/`.
+Arsip 21 dan 31 Agustus, 7, 14, dan 21 September, serta 5 Oktober tetap dipertahankan
+untuk audit historis. Roster diverifikasi ulang pada 12 Oktober tanpa perubahan anggota
+atau tanggal efektif. Delapan snapshot prediksi sebelumnya tetap identik.
 
 Sinkronisasi roster mempertahankan `valid_from` anggota lama. Anggota yang baru pertama kali
 terlihat memakai tanggal observasi terbaru, sedangkan anggota yang hilang dari halaman resmi
@@ -77,7 +77,7 @@ Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 Menjalankan semuanya secara berurutan:
 
 ```bash
-./scripts/run_local_pipeline.sh all 2026-10-05
+./scripts/run_local_pipeline.sh all 2026-10-12
 ```
 
 Memvalidasi format regular season dan playoff aktif:

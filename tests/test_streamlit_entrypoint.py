@@ -19,7 +19,7 @@ def test_streamlit_default_page_renders_regular_season() -> None:
 
     assert not app.exception
     assert app.title[0].value == "MPL Indonesia Season 18 · Regular Season"
-    assert app.sidebar.selectbox[0].value == "S18_W07"
+    assert app.sidebar.selectbox[0].value == "S18_W08"
     for match_filter in ("Selesai", "Semua", "Akan datang"):
         app.radio[0].set_value(match_filter).run(timeout=30)
         assert not app.exception
@@ -39,7 +39,7 @@ from mpl_predictor.dashboard import _render_playoff_page, load_dashboard_data
 
 data, missing = load_dashboard_data(get_project_paths())
 assert not missing
-_render_playoff_page(data, "S18_W07")
+_render_playoff_page(data, "S18_W08")
 """
     ).run(timeout=30)
 
