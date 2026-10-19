@@ -19,9 +19,9 @@ dashboard agar hasil eksperimen dapat direproduksi.
   evaluasi kalibrasi sudah tersedia.
 - Model final terkalibrasi sudah dilatih ulang pada Season 4-17.
 - Tim, roster bertanggal, jadwal, dan hasil resmi Season 18 sudah diintegrasikan dengan
-  snapshot 12 Oktober 2026; jadwal, hasil, dan roster telah diverifikasi ulang.
+  snapshot 19 Oktober 2026; jadwal, hasil, dan roster telah diverifikasi ulang.
 - Simulasi Monte Carlo regular season dan playoff Season 18 sudah tersedia.
-- Rekonstruksi pramusim serta pembaruan Week 1-8 sampai 12 Oktober 2026 sudah tersedia
+- Rekonstruksi pramusim serta pembaruan Week 1-9 sampai 19 Oktober 2026 sudah tersedia
   dengan cutoff leakage-safe untuk bundle deployment saat ini.
 - Explainability global/lokal, dashboard interaktif, dan otomasi pipeline lokal sudah
   tersedia tanpa GitHub Actions.
@@ -95,7 +95,7 @@ make models
 make season18
 make validate-season-config
 make verify
-make local-pipeline OBSERVED_AT=2026-10-12
+make local-pipeline OBSERVED_AT=2026-10-19
 make test
 make lint
 make dashboard
@@ -278,14 +278,16 @@ di-reset pada awal setiap season. Accuracy tetap 66,17%, sedangkan Brier score t
 0,220528 menjadi 0,220427 dan log loss turun dari 0,632517 menjadi 0,632215. Perbaikannya
 kecil, sehingga lapisan ini hanya mengoreksi confidence dan tidak menggantikan model utama.
 
-pertandingan tersisa disimulasikan. Simulasi default menjalankan 20.000 iterasi dengan
-random seed tetap, top enam regular season, lalu bracket delapan seri yang mengikuti
-struktur Season 15-17.
+Snapshot 19 Oktober 2026 memuat seluruh 72 hasil regular season sampai Week 9, dengan
+cutoff prediksi terakhir 18 Oktober. Seluruh skor regular season sudah dikunci sebagai
+hasil aktual. Simulasi default menjalankan 20.000 iterasi dengan random seed tetap untuk
+bracket delapan seri playoff yang diikuti enam tim teratas.
 Status format S18 saat ini `historical_assumption`; config wajib ditinjau lagi setelah
 aturan playoff resmi S18 tersedia.
 
-memperbarui klasemen pada setiap iterasi, tetapi belum memperbarui ulang fitur Elo/form di
-dalam iterasi. Roster S18 sudah terintegrasi secara temporal, namun belum menjadi kolom
+Probabilitas playoff memakai state tim setelah regular season selesai dan dibekukan selama
+simulasi; fitur Elo/form belum diperbarui ulang di dalam iterasi. Roster S18 sudah
+terintegrasi secara temporal, namun belum menjadi kolom
 fitur model match final versi 1.
 
 Bracket playoff memakai konfigurasi deklaratif. Probabilitas seri referensi BO3 diubah
@@ -298,7 +300,40 @@ prediksi pertandingan, akurasi, perbandingan model, dan explainability. `Playoff
 Bracet 6 tim yang dibentuk langsung dari `config/simulation_config.json`, lengkap dengan
 jalur upper/lower bracket dan format BO5/BO7. Selama regular season belum selesai, peserta
 dan seed pada bagan adalah proyeksi berdasarkan ekspektasi ranking simulasi, bukan hasil
-playoff resmi.
+playoff resmi. Pada snapshot `S18_W09`, seed memakai klasemen akhir regular season.
+
+## Pembaruan data 19 Oktober 2026
+
+Delapan hasil Week 9 telah dicocokkan dengan [jadwal resmi MPL Indonesia](https://id-mpl.com/id/schedule)
+dan [MLBBHub](https://mlbbhub.com/mpl/id/schedule):
+
+| Tanggal (WIB) | Pertandingan | Skor |
+| --- | --- | --- |
+| 16 Oktober 2026 | NAVI vs RRQ | 2-1 |
+| 16 Oktober 2026 | GEEK vs AE | 0-2 |
+| 17 Oktober 2026 | ONIC vs DEWA | 2-1 |
+| 17 Oktober 2026 | BTR vs EVOS | 2-1 |
+| 17 Oktober 2026 | RRQ vs GEEK | 2-1 |
+| 18 Oktober 2026 | EVOS vs AE | 2-1 |
+| 18 Oktober 2026 | NAVI vs BTR | 0-2 |
+| 18 Oktober 2026 | ONIC vs TLID | 0-2 |
+
+Regular season telah selesai: 72 pertandingan selesai dan tidak ada pertandingan tersisa.
+Urutan seed playoff sesuai [klasemen resmi MPL Indonesia](https://id-mpl.com/) adalah TLID,
+NAVI, AE, BTR, EVOS, dan ONIC. Simulasi terbaru menempatkan TLID (27,67%), ONIC (24,23%),
+dan NAVI (21,45%) sebagai tiga favorit juara.
+
+Roster sembilan tim diverifikasi ulang tanpa perubahan anggota atau tanggal efektif;
+tetap ada 84 anggota aktif dan 86 baris histori. Arsip terbaru tersedia di
+`data/season18/snapshots/2026-10-19/`, dengan seluruh arsip sebelumnya dipertahankan.
+Dashboard mempunyai sepuluh snapshot dari `S18_PRE` sampai `S18_W09`; sembilan snapshot
+prediksi sebelumnya tetap identik. Akurasi pre-match terbaru adalah 42 dari 72 (58,33%),
+dan seluruh 72 hasil telah memperbarui state tim serta kalibrasi online setelah prediksi.
+
+Explainability global dan perubahan peluang tim tetap tersedia setelah regular season
+selesai. Explainability pertandingan mendatang berisi tabel kosong dengan schema tetap;
+dashboard menampilkan informasi bahwa tidak ada pertandingan regular season tersisa.
+Rata-rata peluang match tersisa ditampilkan sebagai tanda kosong, bukan angka 50%.
 
 ## Prinsip pengembangan
 

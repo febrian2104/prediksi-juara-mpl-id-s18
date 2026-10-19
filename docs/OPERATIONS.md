@@ -31,15 +31,15 @@ Mengambil data S18 terbaru, membuat ulang seluruh snapshot pramusim/mingguan, da
 memperbarui explainability:
 
 ```bash
-./scripts/run_local_pipeline.sh update 2026-10-12
+./scripts/run_local_pipeline.sh update 2026-10-19
 ```
 
 Jika hanya memperbarui jadwal/skor dan mempertahankan roster bertanggal yang ada, gunakan:
 
 ```bash
-.venv/bin/mpl-predictor sync-season18 --schedule-only --observed-at 2026-10-12
-make snapshot-season18 AS_OF=2026-10-12
-make update-predictions AS_OF=2026-10-12
+.venv/bin/mpl-predictor sync-season18 --schedule-only --observed-at 2026-10-19
+make snapshot-season18 AS_OF=2026-10-19
+make update-predictions AS_OF=2026-10-19
 make explain-season18
 ```
 
@@ -51,17 +51,23 @@ Untuk membuat snapshot retrospektif pada akhir tanggal tertentu tanpa memundurka
 roster, jalankan:
 
 ```bash
-make snapshot-season18 AS_OF=2026-10-12
-make update-predictions AS_OF=2026-10-12
+make snapshot-season18 AS_OF=2026-10-19
+make update-predictions AS_OF=2026-10-19
 make explain-season18
 ```
 
-Snapshot 12 Oktober memakai 64 hasil sampai Week 8 dan menyisakan 8 pertandingan.
-Snapshot prediksi `S18_W08` memiliki cutoff 11 Oktober (akhir Week 8); tanggal verifikasi
-sumbernya 12 Oktober. Data bertanggal disimpan di `data/season18/snapshots/2026-10-12/`.
-Arsip 21 dan 31 Agustus, 7, 14, dan 21 September, serta 5 Oktober tetap dipertahankan
-untuk audit historis. Roster diverifikasi ulang pada 12 Oktober tanpa perubahan anggota
-atau tanggal efektif. Delapan snapshot prediksi sebelumnya tetap identik.
+Snapshot 19 Oktober memakai seluruh 72 hasil sampai Week 9; regular season sudah selesai.
+Snapshot prediksi `S18_W09` memiliki cutoff 18 Oktober (akhir Week 9); tanggal verifikasi
+sumbernya 19 Oktober. Data bertanggal disimpan di `data/season18/snapshots/2026-10-19/`.
+Arsip 21 dan 31 Agustus, 7, 14, dan 21 September, serta 5 dan 12 Oktober tetap dipertahankan
+untuk audit historis. Roster diverifikasi ulang pada 19 Oktober tanpa perubahan anggota
+atau tanggal efektif. Sembilan snapshot prediksi sebelumnya tetap identik.
+
+Ketika tidak ada pertandingan regular season tersisa, explainability pertandingan
+menghasilkan Parquet kosong dengan schema tetap dan tidak memanggil transform model pada
+data kosong. Dashboard tetap menampilkan explainability global, perubahan peluang tim,
+evaluasi 72 pertandingan, serta prediksi playoff. Peluang rata-rata pertandingan tersisa
+bernilai kosong. Pipeline ini belum memasukkan hasil playoff aktual.
 
 Sinkronisasi roster mempertahankan `valid_from` anggota lama. Anggota yang baru pertama kali
 terlihat memakai tanggal observasi terbaru, sedangkan anggota yang hilang dari halaman resmi
@@ -77,7 +83,7 @@ Menjalankan lint, seluruh test, dan pemeriksaan file dokumentasi:
 Menjalankan semuanya secara berurutan:
 
 ```bash
-./scripts/run_local_pipeline.sh all 2026-10-12
+./scripts/run_local_pipeline.sh all 2026-10-19
 ```
 
 Memvalidasi format regular season dan playoff aktif:

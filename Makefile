@@ -1,4 +1,4 @@
-.PHONY: setup audit semantic-audit normalize canonicalize quality-report eda prediction-policy analysis build-features baseline modeling build-match-features backtest models sync-season18 snapshot-season18 train-final simulate-season18 validate-season-config simulate-live-season update-live-predictions update-predictions explain-season18 update-season18 season18 verify docs-check local-train local-update local-pipeline test lint format dashboard
+.PHONY: setup audit semantic-audit normalize canonicalize quality-report eda prediction-policy analysis build-features baseline modeling build-match-features backtest models sync-season18 snapshot-season18 train-final simulate-season18 validate-season-config simulate-live-season update-live-predictions update-predictions explain-season18 update-playoffs update-season18 season18 verify docs-check local-train local-update local-pipeline test lint format dashboard
 
 OBSERVED_AT ?=
 AS_OF ?=
@@ -77,7 +77,11 @@ update-predictions:
 explain-season18:
 	.venv/bin/mpl-predictor explain-season18
 
+update-playoffs:
+	.venv/bin/mpl-predictor predict-playoffs $(if $(AS_OF),--as-of $(AS_OF),) $(if $(SYNC),--sync,)
+
 update-season18: sync-season18 train-final update-predictions explain-season18
+	.venv/bin/mpl-predictor predict-playoffs --sync $(if $(OBSERVED_AT),--as-of $(OBSERVED_AT),)
 
 season18: update-season18
 

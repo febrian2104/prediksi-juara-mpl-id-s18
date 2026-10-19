@@ -1,8 +1,9 @@
 import argparse
 import json
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -26,6 +27,7 @@ from mpl_predictor.data.identity import (
     write_identity_summary,
 )
 from mpl_predictor.data.normalization import normalize_tables, write_normalized_tables
+from mpl_predictor.data.playoffs import parse_playoff_schedule_html
 from mpl_predictor.data.season18 import (
     TEAM_METADATA,
     build_season18_asof_snapshot,
@@ -78,6 +80,11 @@ from mpl_predictor.models.final import (
     write_final_model_outputs,
 )
 from mpl_predictor.models.online_learning import backtest_online_learning
+from mpl_predictor.models.playoffs import (
+    build_playoff_forecast,
+    load_playoff_schedule,
+    write_playoff_forecast,
+)
 from mpl_predictor.models.season18_predictions import (
     build_live_prediction_history,
     load_live_season_tables,
@@ -317,6 +324,22 @@ def _build_parser() -> argparse.ArgumentParser:
     explain_parser.add_argument("--match-probabilities", type=Path, default=None)
     explain_parser.add_argument("--prediction-dir", type=Path, default=None)
     explain_parser.add_argument("--report", type=Path, default=None)
+
+    playoff_parser = subparsers.add_parser(
+        "predict-playoffs", help="Forecast a completed regular season's bracket through the final."
+    )
+    playoff_parser.add_argument(
+        "--as-of",
+        type=date.fromisoformat,
+        default=datetime.now(ZoneInfo("Asia/Jakarta")).date(),
+    )
+    playoff_parser.add_argument(
+        "--sync", action="store_true", help="Fetch official playoff dates/results."
+    )
+    playoff_parser.add_argument("--config", type=Path, default=None)
+    playoff_parser.add_argument("--season-dir", type=Path, default=None)
+    playoff_parser.add_argument("--prediction-dir", type=Path, default=None)
+    playoff_parser.add_argument("--report", type=Path, default=None)
     return parser
 
 
@@ -652,6 +675,52 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Champion predictions: {champion_output_path}")
         print(f"Report: {report_path}")
         return int(report["probability_validation"]["invalid_probability_sum_count"] > 0)
+
+    if args.command == "predict-playoffs":
+        paths = get_project_paths()
+        config = load_simulation_config(args.config or paths.root / "config/simulation_config.json")
+        season = int(config["season"])
+        season_dir = args.season_dir or paths.data / f"season{season}"
+        teams, _, regular = load_live_season_tables(season_dir)
+        if args.sync and not regular["status"].eq("completed").all():
+            print("Regular season belum selesai; prediksi playoff menunggu seed akhir.")
+            return 0
+        schedule_path = season_dir / "playoff_schedule_results.csv"
+        schedule = (
+            parse_playoff_schedule_html(
+                fetch_official_html("https://id-mpl.com/id/schedule"), args.as_of, config
+            )
+            if args.sync
+            else load_playoff_schedule(schedule_path)
+        )
+        frames, report = build_playoff_forecast(
+            load_canonical_tables(paths.processed / "canonical"),
+            teams,
+            regular,
+            schedule,
+            load_feature_config(paths.root / "config/feature_config.json"),
+            load_final_match_model(paths.artifacts / "final_match_model.joblib"),
+            config,
+            args.as_of,
+        )
+        if args.sync:
+            schedule.to_csv(schedule_path, index=False)
+        report_path = args.report or paths.reports / f"season{season}_playoff_report.json"
+        write_playoff_forecast(
+            frames,
+            report,
+            args.prediction_dir or paths.processed / "predictions",
+            report_path,
+            season_dir / "playoff_prediction_snapshots" / args.as_of.isoformat(),
+        )
+        leader = frames["teams"].iloc[0]
+        print(f"MPL Season {season} playoff forecast · cutoff {args.as_of}")
+        print(f"Champion favorite: {leader['team_id']} ({leader['champion_probability']:.2%})")
+        print(f"Remaining matches: {report['remaining_playoff_match_count']}")
+        print(f"Exact remaining scenarios: {report['terminal_scenario_count']}")
+        print(f"Most likely complete path champion: {report['most_likely_scenario_champion']}")
+        print(f"Report: {report_path}")
+        return 0
 
     if args.command == "sync-season18":
         paths = get_project_paths()

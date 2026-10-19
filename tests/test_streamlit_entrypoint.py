@@ -19,13 +19,25 @@ def test_streamlit_default_page_renders_regular_season() -> None:
 
     assert not app.exception
     assert app.title[0].value == "MPL Indonesia Season 18 · Regular Season"
-    assert app.sidebar.selectbox[0].value == "S18_W08"
+    assert app.sidebar.selectbox[0].value == "S18_W09"
+    assert any(
+        "Tidak ada pertandingan regular season yang menunggu" in element.value
+        for element in app.info
+    )
+    assert all(element.label != "Pilih pertandingan" for element in app.selectbox)
     for match_filter in ("Selesai", "Semua", "Akan datang"):
         app.radio[0].set_value(match_filter).run(timeout=30)
         assert not app.exception
-        table = next(
+        tables = [
             element.value for element in app.dataframe if "Status akurasi" in element.value.columns
-        )
+        ]
+        if match_filter == "Akan datang":
+            assert not tables
+            assert any(
+                "Tidak ada pertandingan untuk filter ini" in element.value for element in app.info
+            )
+            continue
+        table = tables[0]
         assert table["Week"].is_monotonic_decreasing
         for _, week_rows in table.groupby("Week"):
             assert week_rows["Jadwal"].is_monotonic_decreasing
@@ -39,12 +51,18 @@ from mpl_predictor.dashboard import _render_playoff_page, load_dashboard_data
 
 data, missing = load_dashboard_data(get_project_paths())
 assert not missing
-_render_playoff_page(data, "S18_W08")
+_render_playoff_page(data, "S18_W09")
 """
     ).run(timeout=30)
 
     assert not app.exception
     assert app.title[0].value == "MPL Indonesia Season 18 · Playoff"
     assert "Bracket playoff" in [heading.value for heading in app.subheader]
-    assert "Proyeksi enam besar" in [heading.value for heading in app.subheader]
-    assert len(app.get("plotly_chart")) == 1
+    assert "Peluang mencapai setiap babak" in [heading.value for heading in app.subheader]
+    assert "Jalur pertandingan hingga Grand Final" in [heading.value for heading in app.subheader]
+    assert len(app.get("plotly_chart")) == 2
+    assert any("Regular season selesai" in element.value for element in app.success)
+    assert app.radio[0].value == "Jalur favorit juara"
+    for view in ("Skenario lengkap paling mungkin", "Struktur bracket"):
+        app.radio[0].set_value(view).run(timeout=30)
+        assert not app.exception

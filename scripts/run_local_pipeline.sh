@@ -39,6 +39,7 @@ update_season18() {
     "${cli}" sync-season18 --observed-at "${observation_date}"
     "${cli}" update-season18-predictions
     "${cli}" explain-season18
+    "${cli}" predict-playoffs --sync --as-of "${observation_date}"
 }
 
 verify_project() {

@@ -26,6 +26,9 @@ data/processed/predictions/*
 !data/processed/predictions/season18_global_feature_importance.parquet
 !data/processed/predictions/season18_match_explanations.parquet
 !data/processed/predictions/season18_team_explanations.parquet
+!data/processed/predictions/season18_playoff_teams.parquet
+!data/processed/predictions/season18_playoff_matches.parquet
+!data/processed/predictions/season18_playoff_matchups.parquet
 artifacts/*
 !artifacts/.gitkeep
 reports/figures/*

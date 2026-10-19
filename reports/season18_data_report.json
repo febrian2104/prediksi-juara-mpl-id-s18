@@ -1,7 +1,7 @@
 {
   "report_version": "1.0",
   "season": 18,
-  "observed_at": "2026-10-12",
+  "observed_at": "2026-10-19",
   "sources": {
     "schedule_results": "https://id-mpl.com/id/schedule",
     "rosters": [
@@ -23,9 +23,9 @@
     "player_count": 64,
     "staff_count": 20,
     "scheduled_match_count": 72,
-    "completed_match_count": 64,
-    "remaining_match_count": 8,
-    "completed_through_week": 8
+    "completed_match_count": 72,
+    "remaining_match_count": 0,
+    "completed_through_week": 9
   },
   "temporal_policy": {
     "roster_valid_from": "2026-08-31",
@@ -36,7 +36,7 @@
     ],
     "roster_observed_at": [
       "2026-09-01",
-      "2026-10-12"
+      "2026-10-19"
     ],
     "basis": "Tanggal verifikasi halaman resmi, bukan tanggal pengumuman roster.",
     "historical_use_guard": "Roster ini hanya boleh dipakai pada snapshot dengan cutoff >= valid_from."
@@ -81,7 +81,7 @@
     {
       "check_id": "completed_scores_valid",
       "status": "pass",
-      "count": 64
+      "count": 72
     },
     {
       "check_id": "no_future_results",
@@ -734,6 +734,86 @@
       "team_a_score": 0,
       "team_b_score": 2,
       "winner_team_id": "BTR"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-16T08:00:00.000Z",
+      "match_id": "S18-RS-1100",
+      "team_a_id": "NAVI",
+      "team_b_id": "RRQ",
+      "team_a_score": 2,
+      "team_b_score": 1,
+      "winner_team_id": "NAVI"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-16T11:00:00.000Z",
+      "match_id": "S18-RS-1101",
+      "team_a_id": "GEEK",
+      "team_b_id": "AE",
+      "team_a_score": 0,
+      "team_b_score": 2,
+      "winner_team_id": "AE"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-17T07:00:00.000Z",
+      "match_id": "S18-RS-1102",
+      "team_a_id": "ONIC",
+      "team_b_id": "DEWA",
+      "team_a_score": 2,
+      "team_b_score": 1,
+      "winner_team_id": "ONIC"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-17T10:00:00.000Z",
+      "match_id": "S18-RS-1103",
+      "team_a_id": "BTR",
+      "team_b_id": "EVOS",
+      "team_a_score": 2,
+      "team_b_score": 1,
+      "winner_team_id": "BTR"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-17T13:00:00.000Z",
+      "match_id": "S18-RS-1104",
+      "team_a_id": "RRQ",
+      "team_b_id": "GEEK",
+      "team_a_score": 2,
+      "team_b_score": 1,
+      "winner_team_id": "RRQ"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-18T07:00:00.000Z",
+      "match_id": "S18-RS-1105",
+      "team_a_id": "EVOS",
+      "team_b_id": "AE",
+      "team_a_score": 2,
+      "team_b_score": 1,
+      "winner_team_id": "EVOS"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-18T10:00:00.000Z",
+      "match_id": "S18-RS-1106",
+      "team_a_id": "NAVI",
+      "team_b_id": "BTR",
+      "team_a_score": 0,
+      "team_b_score": 2,
+      "winner_team_id": "BTR"
+    },
+    {
+      "week": 9,
+      "scheduled_at": "2026-10-18T13:00:00.000Z",
+      "match_id": "S18-RS-1107",
+      "team_a_id": "ONIC",
+      "team_b_id": "TLID",
+      "team_a_score": 0,
+      "team_b_score": 2,
+      "winner_team_id": "TLID"
     }
   ],
   "sync_scope": "teams_rosters_schedule"

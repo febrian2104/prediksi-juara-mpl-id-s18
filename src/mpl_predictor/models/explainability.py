@@ -25,6 +25,28 @@ FEATURE_LABELS = {
     "rest_days_diff": "Selisih hari istirahat",
 }
 
+MATCH_EXPLANATION_DTYPES = {
+    "snapshot_id": "string",
+    "match_id": "string",
+    "week": "int64",
+    "scheduled_at": "datetime64[ns, Asia/Jakarta]",
+    "team_a_id": "string",
+    "team_b_id": "string",
+    "team_a_win_probability": "float64",
+    "raw_forward_logit": "float64",
+    "transformed_feature": "string",
+    "source_feature": "string",
+    "feature_label": "string",
+    "raw_value": "float64",
+    "standardized_value": "float64",
+    "coefficient": "float64",
+    "contribution": "float64",
+    "absolute_contribution": "float64",
+    "favors_team_id": "string",
+    "explanation_scope": "string",
+    "contribution_rank": "float64",
+}
+
 
 def _display_feature_name(transformed_name: str) -> tuple[str, str]:
     prefix = "missingindicator_"
@@ -70,6 +92,10 @@ def build_match_explanations(
         match_probabilities["snapshot_order"].eq(latest_order)
         & match_probabilities["status"].eq("scheduled")
     ].copy()
+    if matches.empty:
+        return pd.DataFrame(
+            {column: pd.Series(dtype=dtype) for column, dtype in MATCH_EXPLANATION_DTYPES.items()}
+        )
     columns = list(artifact["feature_columns"])
     pipeline = artifact["pipeline"]
     imputer = pipeline.named_steps["imputer"]
@@ -144,6 +170,7 @@ def build_team_explanations(
         )
     records = []
     for team_id, row in latest.iterrows():
+        remaining_probabilities = schedule_strength.get(str(team_id), [])
         preseason_probability = float(preseason.loc[team_id, "champion_probability"])
         current_probability = float(row["champion_probability"])
         change = current_probability - preseason_probability
@@ -161,8 +188,8 @@ def build_team_explanations(
                 "champion_probability_change": change,
                 "playoff_probability": float(row["playoff_probability"]),
                 "grand_final_probability": float(row["grand_final_probability"]),
-                "mean_remaining_match_win_probability": float(
-                    np.mean(schedule_strength.get(str(team_id), [0.5]))
+                "mean_remaining_match_win_probability": (
+                    float(np.mean(remaining_probabilities)) if remaining_probabilities else None
                 ),
                 "change_direction": "naik" if change > 0 else "turun" if change < 0 else "tetap",
             }
