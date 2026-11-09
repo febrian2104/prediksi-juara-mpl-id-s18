@@ -1,7 +1,7 @@
 {
   "report_version": "1.0",
   "season": 18,
-  "observed_at": "2026-10-19",
+  "observed_at": "2026-11-09",
   "sources": {
     "schedule_results": "https://id-mpl.com/id/schedule",
     "rosters": [
@@ -36,7 +36,7 @@
     ],
     "roster_observed_at": [
       "2026-09-01",
-      "2026-10-19"
+      "2026-11-09"
     ],
     "basis": "Tanggal verifikasi halaman resmi, bukan tanggal pengumuman roster.",
     "historical_use_guard": "Roster ini hanya boleh dipakai pada snapshot dengan cutoff >= valid_from."

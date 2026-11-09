@@ -712,6 +712,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.prediction_dir or paths.processed / "predictions",
             report_path,
             season_dir / "playoff_prediction_snapshots" / args.as_of.isoformat(),
+            source_schedule=schedule,
         )
         leader = frames["teams"].iloc[0]
         print(f"MPL Season {season} playoff forecast · cutoff {args.as_of}")

@@ -24,13 +24,14 @@ ROOT = Path(__file__).resolve().parents[1]
 def inputs():
     tables = load_canonical_tables(ROOT / "data/processed/canonical")
     teams, _, regular = load_live_season_tables(ROOT / "data/season18")
-    playoff = load_playoff_schedule(ROOT / "data/season18/playoff_schedule_results.csv")
+    archive = ROOT / "data/season18/playoff_prediction_snapshots/2026-10-19"
+    playoff = load_playoff_schedule(archive / "source_schedule.csv")
     features = load_feature_config(ROOT / "config/feature_config.json")
     artifact = train_final_match_model(
         pd.read_parquet(ROOT / "data/processed/features/match_features.parquet"),
         load_model_config(ROOT / "config/model_config.json"),
     )
-    config = load_simulation_config(ROOT / "config/simulation_config.json")
+    config = load_simulation_config(archive / "simulation_config.json")
     return tables, teams, regular, playoff, features, artifact, config
 
 
@@ -165,3 +166,40 @@ def test_forecast_outputs_preserve_schedule_and_archive(initial_forecast, tmp_pa
         )
         assert (tmp_path / "archive" / f"{key}.csv").exists()
     assert (tmp_path / "archive/report.json").exists()
+    assert (tmp_path / "archive/simulation_config.json").exists()
+
+
+def test_official_final_results_confirm_btr_and_correct_semifinal_routing(inputs):
+    tables, teams, regular, _, features, artifact, _ = inputs
+    schedule = load_playoff_schedule(ROOT / "data/season18/playoff_schedule_results.csv")
+    config = load_simulation_config(ROOT / "config/simulation_config.json")
+    frames, report = build_playoff_forecast(
+        tables, teams, regular, schedule, features, artifact, config, date(2026, 11, 9)
+    )
+    assert report["confirmed_champion"] == "BTR"
+    assert report["completed_playoff_match_count"] == 8
+    assert report["remaining_playoff_match_count"] == 0
+    assert report["terminal_scenario_count"] == 1
+    assert report["format_confirmation"]["status"] == "official"
+    assert frames["teams"].set_index("team_id").loc["BTR", "champion_probability"] == 1
+    assert frames["matches"].outcome_type.eq("actual").all()
+    assert frames["matches"].team_a_win_probability.isna().all()
+    actual = frames["matches"].set_index("match_id")
+    assert actual.loc["upper_semifinal_1", "team_a_id"] == "NAVI"
+    assert actual.loc["upper_semifinal_2", "team_a_id"] == "TLID"
+    assert actual.loc["grand_final", ["team_a_score", "team_b_score"]].tolist() == [3, 4]
+
+
+def test_forecast_archive_keeps_source_schedule(initial_forecast, inputs, tmp_path):
+    frames, report = initial_forecast
+    write_playoff_forecast(
+        frames,
+        report,
+        tmp_path / "predictions",
+        tmp_path / "report.json",
+        tmp_path / "archive",
+        source_schedule=inputs[3],
+    )
+    pd.testing.assert_frame_equal(
+        load_playoff_schedule(tmp_path / "archive/source_schedule.csv"), inputs[3]
+    )

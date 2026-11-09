@@ -282,6 +282,7 @@ def build_playoff_forecast(
         "terminal_scenario_count": leaf_count,
         "model_name": artifact["model_name"],
         "format_confirmation": config["format_confirmation"],
+        "simulation_config": config,
         "regular_match_count": len(regular_schedule),
         "completed_playoff_match_count": len(fixed),
         "remaining_playoff_match_count": len(bracket) - len(fixed),
@@ -321,6 +322,7 @@ def write_playoff_forecast(
     prediction_dir: Path,
     report_path: Path,
     archive_dir: Path | None = None,
+    source_schedule: pd.DataFrame | None = None,
 ) -> None:
     prediction_dir.mkdir(parents=True, exist_ok=True)
     for key, frame in frames.items():
@@ -333,3 +335,7 @@ def write_playoff_forecast(
         for key, frame in frames.items():
             frame.to_csv(archive_dir / f"{key}.csv", index=False)
         write_json(report, archive_dir / "report.json")
+        if "simulation_config" in report:
+            write_json(report["simulation_config"], archive_dir / "simulation_config.json")
+        if source_schedule is not None:
+            source_schedule.to_csv(archive_dir / "source_schedule.csv", index=False)

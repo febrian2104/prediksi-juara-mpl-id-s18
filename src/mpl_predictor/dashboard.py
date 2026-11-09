@@ -14,7 +14,62 @@ SOURCE_ROOT = Path(__file__).resolve().parents[1]
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
+from mpl_predictor.analysis.season_results import (  # noqa: E402
+    build_championship_comparison,
+    build_playoff_match_comparison,
+    load_preplayoff_archive,
+)
 from mpl_predictor.config import ProjectPaths, get_project_paths  # noqa: E402
+
+PLAYOFF_COMPARISON_STYLES = {
+    "same_winner": ("Sesuai skenario", "#4ade80"),
+    "different_winner": ("Tidak sesuai skenario", "#f87171"),
+    "different_pairing": ("Pasangan berbeda", "#fbbf24"),
+    "pending_result": ("Belum ada hasil", "#94a3b8"),
+    "prediction_unavailable": ("Prediksi tidak tersedia", "#94a3b8"),
+}
+
+
+def _playoff_comparison_labels(row: dict[str, Any]) -> tuple[str, str, str, str]:
+    prediction = "Tidak tersedia"
+    if pd.notna(row["predicted_winner_team_id"]):
+        prediction = (
+            f"{row['predicted_team_a_id']} vs {row['predicted_team_b_id']} "
+            f"→ {row['predicted_winner_team_id']}"
+        )
+    actual = "Belum ada hasil"
+    if pd.notna(row["actual_winner_team_id"]):
+        actual = (
+            f"{row['actual_team_a_id']} {int(row['actual_team_a_score'])}-"
+            f"{int(row['actual_team_b_score'])} {row['actual_team_b_id']}"
+        )
+    label, color = PLAYOFF_COMPARISON_STYLES[row["comparison_status"]]
+    return prediction, actual, label, color
+
+
+def build_playoff_comparison_table(comparison: pd.DataFrame) -> pd.DataFrame:
+    labels = {
+        "play_in_1": "Babak awal 1",
+        "play_in_2": "Babak awal 2",
+        "upper_semifinal_1": "Semifinal atas 1",
+        "upper_semifinal_2": "Semifinal atas 2",
+        "lower_semifinal": "Semifinal bawah",
+        "upper_final": "Final atas",
+        "lower_final": "Final bawah",
+        "grand_final": "Grand Final",
+    }
+    rows = []
+    for record in comparison.to_dict(orient="records"):
+        predicted, actual, status, _ = _playoff_comparison_labels(record)
+        rows.append(
+            {
+                "Babak": labels.get(record["match_id"], record["match_id"]),
+                "Prediksi awal": predicted,
+                "Hasil aktual": actual,
+                "Perbandingan": status,
+            }
+        )
+    return pd.DataFrame(rows, columns=["Babak", "Prediksi awal", "Hasil aktual", "Perbandingan"])
 
 
 def dashboard_file_paths(paths: ProjectPaths) -> dict[str, Path]:
@@ -62,15 +117,31 @@ def load_dashboard_data(paths: ProjectPaths) -> tuple[dict[str, Any], list[Path]
             frames["playoff_report"] = json.load(handle)
         for key, path in playoff_files.items():
             frames[f"playoff_{key}"] = pd.read_parquet(path)
+        archive = load_preplayoff_archive(
+            paths.data / "season18", frames["playoff_matches"], season=18
+        )
+        if archive is not None:
+            frames["preplayoff_teams"], frames["preplayoff_report"] = archive
+            archived_config = (
+                paths.data
+                / "season18"
+                / "playoff_prediction_snapshots"
+                / frames["preplayoff_report"]["as_of"]
+                / "simulation_config.json"
+            )
+            if archived_config.exists():
+                with archived_config.open(encoding="utf-8") as handle:
+                    frames["historical_simulation_config"] = json.load(handle)
     return frames, []
 
 
 def _snapshot_label(row: pd.Series) -> str:
+    day = pd.Timestamp(row["feature_cutoff_date"]).strftime("%d-%m-%Y")
     if row["prediction_type"] == "preseason":
-        return f"Pramusim · cutoff {row['feature_cutoff_date']}"
+        return f"Sebelum musim · {day}"
     if row["prediction_type"] == "as_of":
-        return f"As-of {row['feature_cutoff_date']} · Week {int(row['partial_week'])} parsial"
-    return f"Week {int(row['completed_week'])} · cutoff {row['feature_cutoff_date']}"
+        return f"Minggu {int(row['partial_week'])} berjalan · {day}"
+    return f"Akhir minggu {int(row['completed_week'])} · {day}"
 
 
 def _percent(value: Any) -> str:
@@ -89,7 +160,13 @@ def _prediction_chart(frame: pd.DataFrame):
         text=chart_data["champion_probability"].map(_percent),
         labels={"champion_probability": "Peluang juara", "team_name": "Tim"},
     )
-    figure.update_layout(coloraxis_showscale=False, yaxis_title=None, xaxis_tickformat=".0%")
+    figure.update_layout(
+        height=340,
+        margin={"l": 0, "r": 40, "t": 10, "b": 10},
+        coloraxis_showscale=False,
+        yaxis_title=None,
+        xaxis_tickformat=".0%",
+    )
     figure.update_traces(textposition="outside")
     return figure
 
@@ -161,6 +238,7 @@ def build_playoff_bracket_figure(
     projected_seeds: pd.DataFrame,
     simulation_config: dict[str, Any],
     scenario: pd.DataFrame | None = None,
+    comparison: pd.DataFrame | None = None,
 ) -> go.Figure:
     """Render the configured six-team playoff flow as a responsive bracket figure."""
     required_matches = {
@@ -234,6 +312,10 @@ def build_playoff_bracket_figure(
     scenario_lookup = (
         scenario.set_index("match_id").to_dict(orient="index") if scenario is not None else {}
     )
+    comparison_lookup = (
+        comparison.set_index("match_id").to_dict(orient="index") if comparison is not None else {}
+    )
+    comparison_height = 0.95
 
     for x, y, title in headers:
         figure.add_shape(
@@ -259,6 +341,12 @@ def build_playoff_bracket_figure(
         team_a, team_a_detail = participant_label(match["team_a"])
         team_b, team_b_detail = participant_label(match["team_b"])
         forecast = scenario_lookup.get(match_id)
+        comparison_row = comparison_lookup.get(match_id)
+        comparison_color = (
+            PLAYOFF_COMPARISON_STYLES[comparison_row["comparison_status"]][1]
+            if comparison_row is not None
+            else "#4b5563"
+        )
         if forecast is not None:
             team_a, team_b = str(forecast["team_a_id"]), str(forecast["team_b_id"])
             if forecast["outcome_type"] == "actual":
@@ -277,9 +365,9 @@ def build_playoff_bracket_figure(
             name=f"match-{match_id}",
             x0=x - half_width,
             x1=x + half_width,
-            y0=y - half_height,
+            y0=y - half_height - (comparison_height if comparison_row is not None else 0),
             y1=y + half_height,
-            line={"color": "#4b5563", "width": 1},
+            line={"color": comparison_color, "width": 1},
             fillcolor="#18181b",
             layer="below",
         )
@@ -326,6 +414,34 @@ def build_playoff_bracket_figure(
                 xanchor="right",
                 font={"size": 10, "color": "#93c5fd"},
             )
+        if comparison_row is not None:
+            prediction_text, actual_text, status_text, _ = _playoff_comparison_labels(
+                comparison_row
+            )
+            figure.add_shape(
+                type="line",
+                name=f"comparison-divider-{match_id}",
+                x0=x - half_width,
+                x1=x + half_width,
+                y0=y - half_height,
+                y1=y - half_height,
+                line={"color": "#3f3f46", "width": 1},
+                layer="below",
+            )
+            for kind, offset, text, color in (
+                ("prediction", 0.18, f"Prediksi: {prediction_text}", "#bfdbfe"),
+                ("actual", 0.46, f"Hasil: {actual_text}", "#e5e7eb"),
+                ("status", 0.74, f"<b>{status_text}</b>", comparison_color),
+            ):
+                figure.add_annotation(
+                    name=f"comparison-{kind}-{match_id}",
+                    x=x - half_width + 0.1,
+                    y=y - half_height - offset,
+                    text=text,
+                    showarrow=False,
+                    xanchor="left",
+                    font={"size": 10, "color": color},
+                )
         match_heading = f"{short_match_labels[match_id]} · BO{int(match['best_of'])}"
         if forecast is not None:
             date_label = pd.Timestamp(forecast["scheduled_at"]).tz_convert("Asia/Jakarta")
@@ -384,7 +500,7 @@ def build_playoff_bracket_figure(
             if participant["source"] == "loser":
                 # Reference transfers keep same-column lower-bracket routes off the cards.
                 x, y = positions[source]
-                bottom = y - half_height
+                bottom = y - half_height - (comparison_height if source in comparison_lookup else 0)
                 figure.add_shape(
                     type="line",
                     name=f"transfer-{source}-{target}-{side}",
@@ -413,175 +529,153 @@ def build_playoff_bracket_figure(
             add_connector(source, target, target_offset=offset, target_side=side, color=color)
 
     figure.update_layout(
-        height=650,
+        height=850 if comparison_lookup else 650,
         margin={"l": 5, "r": 5, "t": 5, "b": 5},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
         xaxis={"visible": False, "range": [-0.20, 12.00], "fixedrange": True},
-        yaxis={"visible": False, "range": [0.65, 10.85], "fixedrange": True},
+        yaxis={
+            "visible": False,
+            "range": [0.40 if comparison_lookup else 0.65, 10.85],
+            "fixedrange": True,
+        },
         hovermode=False,
     )
     return figure
 
 
-def _render_overview(data: dict[str, Any], snapshot_id: str) -> None:
+def _latest_snapshot_id(data: dict[str, Any]) -> str:
     predictions = data["predictions"]
+    return str(predictions.loc[predictions["snapshot_order"].idxmax(), "snapshot_id"])
+
+
+def _select_regular_snapshot(data: dict[str, Any]) -> str:
+    rows = data["predictions"].drop_duplicates("snapshot_id").sort_values("snapshot_order")
+    labels = {str(row["snapshot_id"]): _snapshot_label(row) for _, row in rows.iterrows()}
+    with st.expander("Lihat minggu sebelumnya"):
+        st.caption("Opsional. Tampilan awal selalu memakai periode terbaru.")
+        selected = st.selectbox(
+            "Periode prediksi", list(labels), index=len(labels) - 1, format_func=labels.get
+        )
+    return str(selected)
+
+
+def _evaluated_matches(data: dict[str, Any], snapshot_id: str | None = None) -> pd.DataFrame:
     matches = data["matches"]
-    current = predictions.loc[predictions["snapshot_id"].eq(snapshot_id)].sort_values(
-        "champion_probability", ascending=False
+    return matches.loc[
+        matches["snapshot_id"].eq(snapshot_id or _latest_snapshot_id(data))
+        & matches["status"].eq("completed")
+        & matches["prediction_correct"].notna()
+    ]
+
+
+def build_regular_match_table(matches: pd.DataFrame) -> pd.DataFrame:
+    """Present pre-match predictions without changing their values or row order."""
+    current = matches.copy()
+    scheduled_at = pd.to_datetime(current["scheduled_at"], utc=True).dt.tz_convert("Asia/Jakarta")
+    predicted_probability = current["team_a_win_probability"].where(
+        current["predicted_winner_team_id"].eq(current["team_a_id"]),
+        1 - current["team_a_win_probability"],
     )
-    current_matches = matches.loc[matches["snapshot_id"].eq(snapshot_id)]
+    table = pd.DataFrame(index=current.index)
+    table["Week"] = current["week"].astype(int)
+    table["Jadwal"] = scheduled_at.dt.strftime("%d-%m-%Y %H:%M")
+    table["Pertandingan"] = current["team_a_id"] + " vs " + current["team_b_id"]
+    table["Prediksi"] = [
+        f"{team} ({_percent(probability)})"
+        for team, probability in zip(
+            current["predicted_winner_team_id"], predicted_probability, strict=True
+        )
+    ]
+    table["Skor"] = [
+        f"{int(a)}-{int(b)}" if status == "completed" and pd.notna(a) and pd.notna(b) else "—"
+        for a, b, status in zip(
+            current["team_a_score"], current["team_b_score"], current["status"], strict=True
+        )
+    ]
+    table["Status akurasi"] = current["accuracy_status"].map(
+        {"correct": "✅ Benar", "incorrect": "❌ Salah", "pending_result": "Belum dimainkan"}
+    )
+    return table.reset_index(drop=True)
+
+
+def _render_overview(data: dict[str, Any], snapshot_id: str) -> None:
+    current = data["predictions"].loc[data["predictions"]["snapshot_id"].eq(snapshot_id)]
+    current = current.sort_values("champion_probability", ascending=False)
+    matches = data["matches"].loc[data["matches"]["snapshot_id"].eq(snapshot_id)]
     leader = current.iloc[0]
+    completed = int(matches["status"].eq("completed").sum())
+    first, second, third = st.columns(3)
+    first.metric("Favorit pada periode ini", str(leader["team_id"]))
+    second.metric("Peluang juara favorit", _percent(leader["champion_probability"]))
+    third.metric("Pertandingan selesai", f"{completed}/{len(matches)}")
 
-    first, second, third, fourth = st.columns(4)
-    first.metric(
-        "Favorit juara", str(leader["team_name"]), _percent(leader["champion_probability"])
+    st.subheader("Peluang juara saat regular season")
+    st.caption(
+        "Ini prediksi sebelum playoff, bukan hasil akhir musim. "
+        "Lihat halaman Hasil Prediksi untuk membandingkannya dengan juara aktual."
     )
-    second.metric("Match selesai", int(current_matches["status"].eq("completed").sum()), "/ 72")
-    third.metric("Match tersisa", int(current_matches["status"].eq("scheduled").sum()))
-    fourth.metric("Peluang playoff favorit", _percent(leader["playoff_probability"]))
-
-    left, right = st.columns([1.45, 1])
-    with left:
-        st.subheader("Probabilitas juara")
-        st.plotly_chart(_prediction_chart(current), width="stretch")
-    with right:
-        st.subheader("Ranking simulasi")
+    st.plotly_chart(_prediction_chart(current), width="stretch", config={"displayModeBar": False})
+    with st.expander("Rincian peluang setiap tim"):
         table = current[
-            [
-                "champion_rank",
-                "team_name",
-                "champion_probability",
-                "playoff_probability",
-                "expected_regular_rank",
-            ]
+            ["team_name", "champion_probability", "playoff_probability", "grand_final_probability"]
         ].rename(
             columns={
-                "champion_rank": "Rank",
                 "team_name": "Tim",
                 "champion_probability": "Juara",
-                "playoff_probability": "Playoff",
-                "expected_regular_rank": "Ekspektasi rank RS",
+                "playoff_probability": "Lolos playoff",
+                "grand_final_probability": "Grand Final",
             }
         )
         st.dataframe(
-            table.style.format(
-                {"Juara": "{:.2%}", "Playoff": "{:.2%}", "Ekspektasi rank RS": "{:.2f}"}
-            ),
+            table.style.format({column: "{:.2%}" for column in table.columns[1:]}),
             hide_index=True,
             width="stretch",
         )
 
-    st.subheader("Perubahan probabilitas dari pramusim")
-    st.plotly_chart(_history_chart(predictions), width="stretch")
-
 
 def _render_matches(data: dict[str, Any], snapshot_id: str) -> None:
-    matches = data["matches"]
-    snapshot_matches = matches.loc[matches["snapshot_id"].eq(snapshot_id)].sort_values(
+    matches = data["matches"].loc[data["matches"]["snapshot_id"].eq(snapshot_id)]
+    evaluated = _evaluated_matches(data, snapshot_id)
+    correct = int(evaluated["prediction_correct"].sum())
+    st.subheader("Prediksi dan akurasi pertandingan")
+    first, second = st.columns(2)
+    first.metric("Akurasi prediksi", _percent(correct / len(evaluated)) if len(evaluated) else "—")
+    second.metric("Prediksi benar", f"{correct}/{len(evaluated)}")
+    st.caption("Benar atau salah dinilai dari prediksi sebelum pertandingan dimulai.")
+
+    upcoming = matches.loc[matches["status"].eq("scheduled")].sort_values(
         ["scheduled_at", "official_match_id"]
     )
-    evaluated = snapshot_matches.loc[
-        snapshot_matches["status"].eq("completed") & snapshot_matches["prediction_correct"].notna()
-    ]
-    correct_count = int(evaluated["prediction_correct"].sum())
-    accuracy = correct_count / len(evaluated) if len(evaluated) else None
-    base_correct_count = int(evaluated["base_prediction_correct"].sum())
-    base_accuracy = base_correct_count / len(evaluated) if len(evaluated) else None
-    learned_result_count = int(snapshot_matches["online_learning_update_applied"].sum())
-    final_scale = (
-        float(snapshot_matches["online_learning_scale_after_update"].iloc[-1])
-        if not snapshot_matches.empty
-        else 1.0
-    )
+    if not upcoming.empty:
+        st.subheader("Pertandingan berikutnya")
+        st.dataframe(build_regular_match_table(upcoming.head(8)), hide_index=True, width="stretch")
+        if len(upcoming) > 8:
+            with st.expander(f"Semua jadwal berikutnya ({len(upcoming)})"):
+                st.dataframe(
+                    build_regular_match_table(upcoming),
+                    hide_index=True,
+                    width="stretch",
+                    height=400,
+                )
 
-    st.subheader("Prediksi dan akurasi pertandingan")
-    first, second, third, fourth = st.columns(4)
-    first.metric("Prediksi dievaluasi", len(evaluated))
-    second.metric("Prediksi benar", correct_count)
-    third.metric("Akurasi", _percent(accuracy) if accuracy is not None else "-")
-    fourth.metric("Hasil dipelajari", learned_result_count)
-    st.caption(
-        "Status akurasi membandingkan favorit pre-match dengan hasil aktual. Setelah hasil "
-        "tersedia, residual kesalahan melatih kalibrasi online dan hasil memperbarui Elo/form "
-        "untuk pertandingan berikutnya. Hasil pertandingan sendiri tidak pernah masuk ke "
-        "prediksi pre-match-nya."
-    )
-    if base_accuracy is not None:
-        st.caption(
-            f"Akurasi base: {_percent(base_accuracy)} · akurasi adaptif: "
-            f"{_percent(accuracy)} · confidence scale terbaru: {final_scale:.3f}. "
-            "Koefisien model utama tetap dilatih ulang secara terpisah dan walk-forward."
-        )
-
-    filter_options = ["Semua", "Selesai", "Akan datang"]
-    selected_filter = st.radio(
-        "Tampilkan pertandingan",
-        options=filter_options,
-        index=1 if len(evaluated) else 2,
-        horizontal=True,
-        key=f"match_filter_{snapshot_id}",
-    )
-    if selected_filter == "Selesai":
-        current = snapshot_matches.loc[snapshot_matches["status"].eq("completed")].copy()
-    elif selected_filter == "Akan datang":
-        current = snapshot_matches.loc[snapshot_matches["status"].eq("scheduled")].copy()
-    else:
-        current = snapshot_matches.copy()
-    if current.empty:
-        st.info("Tidak ada pertandingan untuk filter ini pada snapshot yang dipilih.")
-        return
-    current = current.sort_values(
+    completed = matches.loc[matches["status"].eq("completed")].sort_values(
         ["week", "scheduled_at", "official_match_id"], ascending=[False, False, False]
-    ).reset_index(drop=True)
-    current["accuracy_label"] = current["accuracy_status"].map(
-        {
-            "correct": "✅ Benar",
-            "incorrect": "❌ Salah",
-            "pending_result": "⏳ Belum dimainkan",
-        }
     )
-    current["learning_label"] = current["result_update_status"].map(
-        {
-            "incorporated_after_pre_match_prediction": "✅ Dipelajari setelah prediksi",
-            "awaiting_result": "⏳ Menunggu hasil",
-        }
-    )
-    table = current[
-        [
-            "week",
-            "scheduled_at",
-            "team_a_id",
-            "team_b_id",
-            "base_team_a_win_probability",
-            "team_a_win_probability",
-            "predicted_winner_team_id",
-            "winner_team_id",
-            "accuracy_label",
-            "online_learning_observation_count",
-            "learning_label",
-        ]
-    ].rename(
-        columns={
-            "week": "Week",
-            "scheduled_at": "Jadwal",
-            "team_a_id": "Team A",
-            "team_b_id": "Team B",
-            "base_team_a_win_probability": "P awal Team A",
-            "team_a_win_probability": "P adaptif Team A",
-            "predicted_winner_team_id": "Prediksi adaptif",
-            "winner_team_id": "Hasil aktual",
-            "accuracy_label": "Status akurasi",
-            "online_learning_observation_count": "Hasil terdahulu dipelajari",
-            "learning_label": "Pembaruan state",
-        }
-    )
-    st.dataframe(
-        table.style.format({"P awal Team A": "{:.2%}", "P adaptif Team A": "{:.2%}"}),
-        hide_index=True,
-        width="stretch",
-    )
+    if not completed.empty:
+        st.subheader("Pertandingan terbaru")
+        st.dataframe(build_regular_match_table(completed.head(8)), hide_index=True, width="stretch")
+        if len(completed) > 8:
+            with st.expander(f"Semua hasil pertandingan ({len(completed)})"):
+                st.dataframe(
+                    build_regular_match_table(completed),
+                    hide_index=True,
+                    width="stretch",
+                    height=400,
+                )
+    elif upcoming.empty:
+        st.info("Belum ada jadwal pertandingan pada periode ini.")
 
 
 def _render_explainability(data: dict[str, Any]) -> None:
@@ -751,312 +845,489 @@ def _render_data_scope(data: dict[str, Any]) -> None:
     )
 
 
-def _render_regular_season_page(data: dict[str, Any], snapshot_id: str) -> None:
-    st.title("MPL Indonesia Season 18 · Regular Season")
-    st.caption("Prediksi leakage-safe · calibrated match model · Monte Carlo 20.000 iterasi")
-    overview_tab, matches_tab, model_tab, explanation_tab, data_tab = st.tabs(
-        ["Ringkasan", "Pertandingan", "Perbandingan model", "Explainability", "Data & asumsi"]
-    )
-    with overview_tab:
-        _render_overview(data, snapshot_id)
-    with matches_tab:
-        _render_matches(data, snapshot_id)
-    with model_tab:
+def _render_regular_season_page(data: dict[str, Any], snapshot_id: str | None = None) -> None:
+    st.title("Regular Season")
+    st.caption("MPL Indonesia Season 18 · Peluang tim dan hasil pertandingan regular season.")
+    selected = snapshot_id or _select_regular_snapshot(data)
+    period = data["predictions"].loc[data["predictions"]["snapshot_id"].eq(selected)].iloc[0]
+    st.caption(f"Menampilkan: {_snapshot_label(period)}")
+    _render_overview(data, selected)
+    st.divider()
+    _render_matches(data, selected)
+
+    with st.expander("Riwayat peluang dari minggu ke minggu"):
+        st.plotly_chart(_history_chart(data["predictions"]), width="stretch")
+    with st.expander("Tentang model, pembelajaran, dan data"):
+        matches = (
+            data["matches"]
+            .loc[data["matches"]["snapshot_id"].eq(selected)]
+            .sort_values(["scheduled_at", "official_match_id"])
+        )
+        learned = int(matches["online_learning_update_applied"].sum())
+        st.write(
+            f"{learned} hasil pertandingan sudah dipelajari setelah prediksinya dibuat. "
+            "Hasil memperbarui kekuatan tim dan penyesuaian probabilitas untuk laga berikutnya."
+        )
+        if not matches.empty:
+            st.caption(
+                "Penyesuaian keyakinan model terakhir: "
+                f"{float(matches['online_learning_scale_after_update'].iloc[-1]):.3f}. "
+                "Penjelasan fitur di bawah memakai pembaruan model terbaru."
+            )
         _render_model_comparison(data)
-    with explanation_tab:
         _render_explainability(data)
-    with data_tab:
         _render_data_scope(data)
 
 
-def _render_playoff_forecast_tables(data: dict[str, Any], scenario: pd.DataFrame) -> None:
-    st.subheader("Peluang juara playoff")
-    st.plotly_chart(_prediction_chart(data["playoff_teams"]), width="stretch")
-    st.subheader("Peluang mencapai setiap babak")
-    columns = {
-        "seed": "Seed",
-        "team_name": "Tim",
-        "upper_semifinal_reach_probability": "UB Semifinal",
-        "lower_semifinal_reach_probability": "LB Semifinal",
-        "upper_final_reach_probability": "UB Final",
-        "lower_final_reach_probability": "LB Final",
-        "grand_final_probability": "Grand Final",
-        "champion_probability": "Juara",
-    }
-    table = data["playoff_teams"][list(columns)].rename(columns=columns).sort_values("Seed")
-    st.dataframe(
-        table.style.format({label: "{:.2%}" for label in list(columns.values())[2:]}),
-        hide_index=True,
-        width="stretch",
+def _completed_grand_final(data: dict[str, Any]) -> pd.Series | None:
+    matches = data.get("playoff_matches")
+    if matches is None:
+        return None
+    final = matches.loc[matches["round"].eq("grand_final") & matches["outcome_type"].eq("actual")]
+    return None if final.empty else final.iloc[0]
+
+
+def _render_final_summary(data: dict[str, Any]) -> None:
+    report = data["playoff_report"]
+    final = _completed_grand_final(data)
+    first, second, third = st.columns(3)
+    first.metric("Juara aktual", report["confirmed_champion"] or "Belum ditentukan")
+    second.metric(
+        "Runner-up", str(final["loser_team_id"]) if final is not None else "Belum ditentukan"
     )
-    st.subheader("Jalur pertandingan hingga Grand Final")
-    st.caption(
-        "Pasangan pada babak lanjut mengikuti jalur yang dipilih. Persentase kemenangan "
-        "berlaku jika pasangan tersebut bertemu; hasil aktual ditandai terpisah."
+    score = (
+        f"{final['team_a_id']} {int(final['team_a_score'])}-"
+        f"{int(final['team_b_score'])} {final['team_b_id']}"
+        if final is not None
+        else "Belum dimainkan"
     )
+    third.metric("Skor Grand Final", score)
+
+
+def _render_playoff_forecast_tables(
+    data: dict[str, Any], scenario: pd.DataFrame, *, show_details: bool = True
+) -> None:
+    report = data["playoff_report"]
+    confirmed = bool(report["confirmed_champion"])
+    st.subheader("Hasil pertandingan" if confirmed else "Jadwal dan prediksi")
     path = scenario.copy()
-    path["scheduled_at"] = pd.to_datetime(path["scheduled_at"], utc=True).dt.tz_convert(
-        "Asia/Jakarta"
+    rounds = {
+        "play_ins": "Babak awal",
+        "upper_semifinal": "Semifinal atas",
+        "lower_semifinal": "Semifinal bawah",
+        "upper_final": "Final atas",
+        "lower_final": "Final bawah",
+        "grand_final": "Grand Final",
+    }
+    table = pd.DataFrame(index=path.index)
+    table["Tanggal"] = (
+        pd.to_datetime(path["scheduled_at"], utc=True)
+        .dt.tz_convert("Asia/Jakarta")
+        .dt.strftime("%d-%m %H:%M")
     )
-    path["score"] = path.apply(
-        lambda row: (
-            f"{int(row.team_a_score)}-{int(row.team_b_score)}"
-            if row.outcome_type == "actual"
-            else "—"
-        ),
-        axis=1,
-    )
-    path["outcome_type"] = path["outcome_type"].map(
-        {"actual": "Hasil aktual", "prediction": "Skenario prediksi"}
-    )
-    path = path[
-        [
-            "scheduled_at",
-            "match_id",
-            "best_of",
-            "team_a_id",
-            "team_b_id",
-            "team_a_win_probability",
-            "winner_team_id",
-            "score",
-            "outcome_type",
-        ]
-    ].rename(
-        columns={
-            "scheduled_at": "Jadwal WIB",
-            "match_id": "Pertandingan",
-            "best_of": "BO",
-            "team_a_id": "Team A",
-            "team_b_id": "Team B",
-            "team_a_win_probability": "P Team A jika bertemu",
-            "winner_team_id": "Pemenang pada jalur",
-            "score": "Skor aktual",
-            "outcome_type": "Status",
-        }
-    )
-    st.dataframe(
-        path.style.format({"P Team A jika bertemu": "{:.2%}"}, na_rep="—"),
-        hide_index=True,
-        width="stretch",
-    )
-    with st.expander("Kemungkinan pasangan dan asumsi prediksi"):
-        st.caption(
-            "Peluang pasangan menghitung semua jalur yang bisa mempertemukan kedua tim "
-            "pada babak tersebut. Peluang menang bersyarat pada pasangan yang terpilih."
+    table["Babak"] = path["round"].map(rounds)
+    table["Pertandingan"] = path["team_a_id"] + " vs " + path["team_b_id"]
+    table["Skor"] = [
+        f"{int(a)}-{int(b)}" if kind == "actual" else "—"
+        for a, b, kind in zip(
+            path["team_a_score"], path["team_b_score"], path["outcome_type"], strict=True
         )
-        pairs = data["playoff_matchups"].rename(
-            columns={
-                "match_id": "Pertandingan",
-                "team_a_id": "Team A",
-                "team_b_id": "Team B",
-                "matchup_probability": "Peluang pasangan",
-                "team_a_win_probability": "P menang Team A jika bertemu",
+    ]
+    table["Pemenang" if confirmed else "Pemenang / prediksi"] = path["winner_team_id"]
+    if not confirmed:
+        table["Status"] = path["outcome_type"].map(
+            {"actual": "Hasil aktual", "prediction": "Prediksi, belum pasti"}
+        )
+        st.caption("Pasangan di babak berikutnya adalah contoh skenario, bukan peserta yang pasti.")
+    st.dataframe(table, hide_index=True, width="stretch")
+    if not show_details:
+        return
+
+    with st.expander("Detail peluang dan metode"):
+        if not confirmed:
+            columns = {
+                "team_name": "Tim",
+                "upper_semifinal_reach_probability": "Semifinal atas",
+                "lower_semifinal_reach_probability": "Semifinal bawah",
+                "upper_final_reach_probability": "Final atas",
+                "lower_final_reach_probability": "Final bawah",
+                "grand_final_probability": "Grand Final",
+                "champion_probability": "Juara",
             }
-        )
-        st.dataframe(
-            pairs.style.format(
-                {
-                    "Peluang pasangan": "{:.2%}",
-                    "P menang Team A jika bertemu": "{:.2%}",
+            chances = data["playoff_teams"][list(columns)].rename(columns=columns)
+            st.dataframe(
+                chances.style.format({label: "{:.2%}" for label in list(columns.values())[1:]}),
+                hide_index=True,
+                width="stretch",
+            )
+            pairs = data["playoff_matchups"].rename(
+                columns={
+                    "match_id": "Babak",
+                    "team_a_id": "Tim A",
+                    "team_b_id": "Tim B",
+                    "matchup_probability": "Peluang bertemu",
+                    "team_a_win_probability": "Peluang Tim A menang jika bertemu",
                 }
-            ),
-            hide_index=True,
-            width="stretch",
+            )
+            st.caption("Rincian pasangan yang mungkin bertemu pada setiap babak:")
+            st.dataframe(
+                pairs.style.format(
+                    {
+                        "Peluang bertemu": "{:.2%}",
+                        "Peluang Tim A menang jika bertemu": "{:.2%}",
+                    }
+                ),
+                hide_index=True,
+                width="stretch",
+                height=350,
+            )
+        else:
+            st.write(
+                "Seluruh hasil sudah dikonfirmasi. Tidak ada pertandingan tersisa untuk diprediksi."
+            )
+        st.caption(
+            f"Model: {report['model_name']} · "
+            f"{report['terminal_scenario_count']} kemungkinan hasil tersisa · "
+            f"Status format: {report['format_confirmation']['status']}."
         )
-        report = data["playoff_report"]
-        st.write(
-            f"Metode: enumerasi eksak {report['terminal_scenario_count']} jalur hasil tersisa."
-        )
-        st.write(f"Status format: {report['format_confirmation']['status']}.")
         for assumption in report["assumptions"]:
             st.caption(assumption)
 
 
-def _render_playoff_page(data: dict[str, Any], snapshot_id: str) -> None:
-    st.title("MPL Indonesia Season 18 · Playoff")
-    st.caption("Bracket 6 tim · double elimination setelah quarterfinal · BO5 dan BO7")
-    predictions = data["predictions"]
-    matches = data["matches"]
-    current = predictions.loc[predictions["snapshot_id"].eq(snapshot_id)].copy()
-    current_matches = matches.loc[matches["snapshot_id"].eq(snapshot_id)]
-    projected_seeds = build_projected_playoff_seeds(predictions, snapshot_id)
-    remaining_matches = int(current_matches["status"].eq("scheduled").sum())
-    latest_id = predictions.loc[predictions["snapshot_order"].idxmax(), "snapshot_id"]
-    report = (
-        data.get("playoff_report") if not remaining_matches and snapshot_id == latest_id else None
-    )
-    if report is not None:
-        current = data["playoff_teams"]
-    champion_favorite = current.sort_values("champion_probability", ascending=False).iloc[0]
-    final_favorite = current.sort_values("grand_final_probability", ascending=False).iloc[0]
+def _archived_playoff_match_comparison(data: dict[str, Any]) -> pd.DataFrame | None:
+    teams = data.get("preplayoff_teams")
+    report = data.get("preplayoff_report")
+    actuals = data.get("playoff_matches")
+    if teams is None or teams.empty or report is None or actuals is None:
+        return None
+    favorite = teams.sort_values(["champion_probability", "team_id"], ascending=[False, True]).iloc[
+        0
+    ]
+    path = report.get("champion_paths", {}).get(str(favorite["team_id"]))
+    if not path:
+        return None
+    return build_playoff_match_comparison(pd.DataFrame(path["matches"]), actuals)
 
-    first, second, third, fourth = st.columns(4)
-    first.metric(
-        "Slot playoff", int(data["simulation_config"]["regular_season"]["playoff_team_count"])
-    )
-    second.metric(
-        "Match playoff tersisa" if report is not None else "Match RS tersisa",
-        report["remaining_playoff_match_count"] if report is not None else remaining_matches,
-    )
-    third.metric(
-        "Favorit Grand Final",
-        str(final_favorite["team_id"]),
-        _percent(final_favorite["grand_final_probability"]),
-    )
-    fourth.metric(
-        "Favorit juara",
-        str(champion_favorite["team_id"]),
-        _percent(champion_favorite["champion_probability"]),
-    )
 
-    if remaining_matches:
-        st.info(
-            "Regular season belum selesai. Tim pada bagan adalah proyeksi seed berdasarkan "
-            "ekspektasi ranking simulasi, bukan peserta playoff yang sudah resmi."
+def _render_archived_playoff_prediction(data: dict[str, Any]) -> bool:
+    """Keep the original model choice visible even after the actual final is known."""
+    teams = data.get("preplayoff_teams")
+    report = data.get("preplayoff_report")
+    if teams is None or teams.empty or report is None:
+        st.warning(
+            "Arsip prediksi sebelum playoff tidak tersedia. "
+            "Hasil aktual tidak digunakan untuk membuat prediksi lama pengganti."
         )
-    else:
-        st.success("Regular season selesai; seed pada bagan memakai ranking akhir simulasi.")
+        return False
 
-    scenario = None
-    if report is not None:
-        st.caption(f"Prediksi playoff per {report['as_of']} · hasil aktual dikunci sesuai cutoff.")
-        if report["confirmed_champion"]:
-            st.success(f"Juara aktual MPL Season 18: {report['confirmed_champion']}")
-        view = st.radio(
-            "Tampilan bagan",
-            ["Jalur favorit juara", "Skenario lengkap paling mungkin", "Struktur bracket"],
-            horizontal=True,
+    favorite = teams.sort_values(["champion_probability", "team_id"], ascending=[False, True]).iloc[
+        0
+    ]
+    team_id = str(favorite["team_id"])
+    champion = data["playoff_report"]["confirmed_champion"]
+    st.subheader("Prediksi juara model sebelum playoff")
+    first, second, third = st.columns(3)
+    first.metric("Pilihan model", team_id)
+    second.metric("Peluang juara sebelum playoff", _percent(favorite["champion_probability"]))
+    third.metric("Juara aktual", champion or "Belum ditentukan")
+    st.caption(f"Prediksi tersimpan tanggal {report['as_of']}; bukan prediksi ulang setelah final.")
+    if champion:
+        verdict = "tepat" if champion == team_id else "tidak tepat"
+        st.write(f"Pilihan model {team_id} {verdict}; juara aktual adalah {champion}.")
+
+    if report["format_confirmation"]["status"] != "official":
+        st.warning(
+            "Prediksi awal memakai asumsi jalur semifinal lama yang berbeda dari bracket aktual. "
+            "Bagan arsip dipertahankan, bukan diubah mengikuti hasil."
         )
-        favorite = str(champion_favorite["team_id"])
-        if view == "Jalur favorit juara":
-            champion_path = report["champion_paths"][favorite]
-            scenario = pd.DataFrame(champion_path["matches"])
-            st.info(
-                f"Contoh jalur ini bersyarat pada {favorite} menjadi juara. "
-                f"Peluang juara total {favorite}: "
-                f"{_percent(champion_favorite['champion_probability'])}."
-            )
-        elif view == "Skenario lengkap paling mungkin":
-            scenario = data["playoff_matches"]
-            st.info(
-                f"Peluang gabungan seluruh hasil pada jalur ini: "
-                f"{_percent(report['most_likely_scenario_probability'])}. "
-                "Favorit juara total mempertimbangkan semua jalur."
-            )
+    config = report.get("simulation_config") or data.get("historical_simulation_config")
+    champion_path = report.get("champion_paths", {}).get(team_id)
+    if config is None or not champion_path:
+        st.info("Pilihan model tersedia, tetapi bagan prediksi aslinya belum tersedia.")
+        return True
 
-    st.subheader("Bracket playoff")
+    seeds = teams[["seed", "team_id"]].rename(columns={"seed": "projected_seed"}).copy()
+    seeds["projected_seed_probability"] = 1.0  # Final RS seeds were known at this archive.
+    scenario = pd.DataFrame(champion_path["matches"])
+    comparison = _archived_playoff_match_comparison(data)
+    st.subheader("Bagan prediksi model")
     st.caption(
-        (
-            "Persentase menunjukkan peluang kemenangan jika pasangan pada jalur ini bertemu. "
-            "Tanda ▸ menandai pemenang pada skenario; ✓ menandai hasil aktual. "
-            if scenario is not None
-            else "Persentase pada slot seed adalah peluang tim finis tepat pada seed tersebut. "
-        )
-        + "Garis biru menunjukkan jalur upper bracket, oranye jalur lower bracket, dan kuning "
-        "jalur menuju Grand Final. Penanda 'Kalah →' menunjukkan perpindahan ke lower bracket; "
-        "slot tujuan mencantumkan pertandingan asal tim."
-    )
-    bracket_figure = build_playoff_bracket_figure(
-        projected_seeds, data["simulation_config"], scenario
+        f"▸ Pemenang pada contoh jalur jika {team_id} menjadi juara, bukan hasil pasti. "
+        "Persentase pada pertandingan adalah peluang menang jika pasangan tersebut bertemu."
     )
     st.plotly_chart(
-        bracket_figure,
+        build_playoff_bracket_figure(seeds, config, scenario, comparison=comparison),
         width="stretch",
         config={"displayModeBar": False, "responsive": True},
     )
-
-    if report is not None:
-        _render_playoff_forecast_tables(
-            data, scenario if scenario is not None else data["playoff_matches"]
+    if comparison is not None:
+        st.subheader("Perbandingan prediksi dan hasil")
+        st.caption(
+            "Hijau: sesuai skenario. Merah: pemenang berbeda. Kuning: pasangan tim berbeda. "
+            "Ini perbandingan skenario arsip, bukan akurasi prediksi pre-match playoff."
         )
+        st.dataframe(build_playoff_comparison_table(comparison), hide_index=True, width="stretch")
+    return True
+
+
+def _render_playoff_page(data: dict[str, Any], snapshot_id: str | None = None) -> None:
+    st.title("Playoff")
+    st.caption(
+        "MPL Indonesia Season 18 · Enam tim berebut juara; dua teratas langsung ke semifinal."
+    )
+    selected = snapshot_id or _latest_snapshot_id(data)
+    current = data["predictions"].loc[data["predictions"]["snapshot_id"].eq(selected)]
+    regular = data["matches"].loc[data["matches"]["snapshot_id"].eq(selected)]
+    seeds = build_projected_playoff_seeds(data["predictions"], selected)
+    regular_remaining = int(regular["status"].eq("scheduled").sum())
+    report = (
+        data.get("playoff_report")
+        if (not regular_remaining and selected == _latest_snapshot_id(data))
+        else None
+    )
+    scenario = None
+    if report is not None:
+        current = data["playoff_teams"]
+    favorite = current.sort_values("champion_probability", ascending=False).iloc[0]
+    confirmed = bool(report and report["confirmed_champion"])
+
+    if confirmed and _render_archived_playoff_prediction(data):
+        with st.expander("Lihat hasil aktual dan skor playoff"):
+            _render_final_summary(data)
+            st.caption(f"Hasil terkonfirmasi per {report['as_of']}, bukan prediksi model.")
+            st.subheader("Bagan hasil aktual")
+            st.plotly_chart(
+                build_playoff_bracket_figure(
+                    seeds,
+                    data["simulation_config"],
+                    data["playoff_matches"],
+                    comparison=_archived_playoff_match_comparison(data),
+                ),
+                width="stretch",
+                config={"displayModeBar": False, "responsive": True},
+            )
+            _render_playoff_forecast_tables(data, data["playoff_matches"], show_details=False)
         return
 
-    st.subheader("Proyeksi enam besar")
-    seed_table = projected_seeds[
-        [
-            "projected_seed",
-            "team_name",
-            "projected_seed_probability",
-            "playoff_probability",
-            "grand_final_probability",
-            "champion_probability",
-            "expected_regular_rank",
-        ]
-    ].rename(
-        columns={
-            "projected_seed": "Seed",
-            "team_name": "Tim",
-            "projected_seed_probability": "Peluang seed",
-            "playoff_probability": "Peluang playoff",
-            "grand_final_probability": "Peluang Grand Final",
-            "champion_probability": "Peluang juara",
-            "expected_regular_rank": "Ekspektasi rank RS",
-        }
+    if confirmed:
+        _render_final_summary(data)
+        st.caption(
+            f"Seluruh pertandingan playoff selesai · Data per {report['as_of']}. "
+            "Persentase prediksi awal tersedia di halaman Hasil Prediksi."
+        )
+        scenario = data["playoff_matches"]
+    else:
+        first, second, third = st.columns(3)
+        first.metric("Favorit juara", str(favorite["team_id"]))
+        second.metric("Peluang juara", _percent(favorite["champion_probability"]))
+        third.metric(
+            "Pertandingan playoff tersisa" if report is not None else "Pertandingan RS tersisa",
+            report["remaining_playoff_match_count"] if report is not None else regular_remaining,
+        )
+        if report is not None:
+            path = report["champion_paths"][str(favorite["team_id"])]
+            scenario = pd.DataFrame(path["matches"])
+            st.info(
+                f"Contoh jalur jika {favorite['team_id']} menjadi juara, bukan hasil pasti. "
+                f"Data per {report['as_of']}."
+            )
+        else:
+            st.info(
+                "Tim di bagan masih berupa proyeksi. "
+                "Hasil pertandingan regular season menentukan peserta dan urutannya."
+                if regular_remaining
+                else "Regular season selesai. Bagan memakai urutan akhir; "
+                "hasil playoff belum tersedia."
+            )
+
+    st.subheader("Bagan playoff")
+    st.caption(
+        "✓ Hasil aktual · ▸ Prediksi pemenang, belum pasti"
+        if scenario is not None
+        else ("Angka di slot awal menunjukkan peluang tim menempati urutan tersebut.")
     )
-    st.dataframe(
-        seed_table.style.format(
-            {
-                "Peluang seed": "{:.2%}",
-                "Peluang playoff": "{:.2%}",
-                "Peluang Grand Final": "{:.2%}",
-                "Peluang juara": "{:.2%}",
-                "Ekspektasi rank RS": "{:.2f}",
-            }
-        ),
-        hide_index=True,
+    config = (
+        data["simulation_config"]
+        if report is not None
+        else data.get("historical_simulation_config", data["simulation_config"])
+    )
+    st.plotly_chart(
+        build_playoff_bracket_figure(seeds, config, scenario),
         width="stretch",
+        config={"displayModeBar": False, "responsive": True},
     )
+    if report is not None:
+        _render_playoff_forecast_tables(data, scenario)
+    else:
+        table = seeds[["projected_seed", "team_name", "playoff_probability"]].rename(
+            columns={
+                "projected_seed": "Urutan",
+                "team_name": "Tim",
+                "playoff_probability": "Peluang lolos",
+            }
+        )
+        with st.expander("Tim pada bagan"):
+            st.dataframe(
+                table.style.format({"Peluang lolos": "{:.2%}"}),
+                hide_index=True,
+                width="stretch",
+            )
+    with st.expander("Cara membaca bagan"):
+        st.write(
+            "Babak awal mempertemukan peringkat 3 lawan 6 dan 4 lawan 5. "
+            "Tim yang kalah pada babak awal langsung gugur. "
+            "Mulai semifinal, tim yang kalah di jalur atas mendapat kesempatan kedua "
+            "di jalur bawah. Pemenang kedua jalur bertemu di Grand Final."
+        )
+        st.caption("BO5: menang 3 game. BO7: menang 4 game. Jadwal menggunakan waktu WIB.")
+
+
+def _render_prediction_results_page(data: dict[str, Any]) -> None:
+    st.title("Hasil Prediksi")
+    st.caption(
+        "MPL Indonesia Season 18 · Bandingkan prediksi sebelum playoff dengan hasil akhirnya."
+    )
+    report = data.get("playoff_report")
+    if report is None:
+        st.info("Ringkasan akan tersedia setelah data playoff diperbarui.")
+        return
+    _render_final_summary(data)
+    st.caption(f"Data per {report['as_of']}. Hasil yang sudah pasti bukan ukuran akurasi prediksi.")
+
+    archived = data.get("preplayoff_teams")
+    comparison = None
+    table = None
+    if archived is None:
+        st.warning(
+            "Arsip prediksi sebelum playoff tidak tersedia. "
+            "Evaluasi juara tidak dibuat dari hasil yang sudah diketahui."
+        )
+    else:
+        comparison = build_championship_comparison(archived, data["playoff_matches"])
+        archive_report = data["preplayoff_report"]
+        st.subheader("Prediksi awal dibanding hasil akhir")
+        st.caption(f"Prediksi asli {archive_report['as_of']}, dibuat sebelum playoff dimulai.")
+        if archive_report["format_confirmation"]["status"] != "official":
+            st.warning(
+                "Prediksi awal memakai asumsi jalur semifinal lama yang berbeda dari "
+                "bracket aktual. Angka aslinya tetap dipertahankan."
+            )
+        table = comparison[
+            [
+                "team_name",
+                "champion_probability",
+                "grand_final_probability",
+                "actual_result",
+            ]
+        ].rename(
+            columns={
+                "team_name": "Tim",
+                "champion_probability": "Prediksi juara",
+                "grand_final_probability": "Prediksi Grand Final",
+                "actual_result": "Hasil aktual",
+            }
+        )
+        st.dataframe(
+            table.style.format({"Prediksi juara": "{:.2%}", "Prediksi Grand Final": "{:.2%}"}),
+            hide_index=True,
+            width="stretch",
+        )
+
+    evaluated = _evaluated_matches(data)
+    correct = int(evaluated["prediction_correct"].sum())
+    st.subheader("Seberapa tepat prediksinya?")
+    if comparison is not None:
+        favorite = str(comparison.iloc[0]["team_id"])
+        champion = report["confirmed_champion"]
+        champion_row = comparison.loc[comparison["team_id"].eq(champion)]
+        first, second, third = st.columns(3)
+        first.metric("Prediksi Sebelum Playoff", favorite)
+        second.metric(
+            "Peluang awal juara aktual",
+            _percent(champion_row.iloc[0]["champion_probability"])
+            if not champion_row.empty
+            else "—",
+        )
+        third.metric(
+            "Akurasi pertandingan RS",
+            _percent(correct / len(evaluated)) if len(evaluated) else "—",
+        )
+        if not champion_row.empty:
+            outcome = "menjadi juara" if favorite == champion else "tidak menjadi juara"
+            rank = int(champion_row.iloc[0]["forecast_rank"])
+            st.write(
+                f"Favorit awal {favorite} {outcome}. "
+                f"Juara aktual {champion} berada di urutan favorit {rank} sebelum playoff."
+            )
+        else:
+            st.caption("Pemenang turnamen belum diketahui; evaluasi juara menunggu hasil final.")
+    else:
+        st.metric(
+            "Akurasi pertandingan RS",
+            _percent(correct / len(evaluated)) if len(evaluated) else "—",
+        )
+    st.caption(
+        f"{correct} dari {len(evaluated)} prediksi pertandingan regular season benar. "
+        "Playoff tidak termasuk dalam angka akurasi ini."
+    )
+
+    with st.expander("Riwayat peluang dan unduh data"):
+        st.plotly_chart(_history_chart(data["predictions"]), width="stretch")
+        if table is not None:
+            st.download_button(
+                "Unduh perbandingan (CSV)",
+                table.to_csv(index=False).encode("utf-8-sig"),
+                file_name="season18_prediksi_dan_hasil.csv",
+                mime="text/csv",
+            )
+        st.caption(
+            "Setiap pertandingan RS dinilai satu kali dari prediksi sebelum laga. "
+            "Skenario pasangan playoff tidak diperlakukan sebagai prediksi pre-match aktual. "
+            "Angka 100% setelah final berarti hasil terkonfirmasi, bukan model akurat 100%."
+        )
+        st.caption(f"Model: {report['model_name']}. Evaluasi juara mencakup satu turnamen.")
+    st.markdown("Sumber hasil: [Jadwal resmi MPL Indonesia](https://id-mpl.com/id/schedule).")
 
 
 def main() -> None:
-    st.set_page_config(page_title="MPL S18 Predictor", page_icon="🏆", layout="wide")
-    paths = get_project_paths()
-    data, missing = load_dashboard_data(paths)
+    st.set_page_config(
+        page_title="MPL S18 Predictor",
+        page_icon="🏆",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+    data, missing = load_dashboard_data(get_project_paths())
     if missing:
         st.title("MPL Indonesia Season 18 Champion Predictor")
-        st.error("Output prediksi belum lengkap.")
-        st.code("make update-season18")
-        with st.expander("File yang belum tersedia"):
+        st.error("Data prediksi belum siap. Jalankan pembaruan data terlebih dahulu.")
+        with st.expander("Petunjuk pembaruan"):
+            st.code("make update-season18")
             for path in missing:
                 st.write(path)
         return
 
-    snapshot_rows = (
-        data["predictions"][
-            [
-                "snapshot_id",
-                "snapshot_order",
-                "prediction_type",
-                "completed_week",
-                "partial_week",
-                "feature_cutoff_date",
-            ]
-        ]
-        .drop_duplicates()
-        .sort_values("snapshot_order")
-    )
-    labels = {str(row["snapshot_id"]): _snapshot_label(row) for _, row in snapshot_rows.iterrows()}
-    selected_snapshot = st.sidebar.selectbox(
-        "Snapshot prediksi",
-        options=list(labels),
-        index=len(labels) - 1,
-        format_func=labels.get,
-    )
-    regular_season_page = st.Page(
-        lambda: _render_regular_season_page(data, selected_snapshot),
-        title="Regular Season",
-        icon="📊",
-        url_path="regular-season",
-        default=True,
-    )
-    playoff_page = st.Page(
-        lambda: _render_playoff_page(data, selected_snapshot),
-        title="Playoff",
-        icon="🏆",
-        url_path="playoff",
-    )
-    navigation = st.navigation([regular_season_page, playoff_page], position="top")
-    navigation.run()
+    pages = [
+        st.Page(
+            lambda: _render_regular_season_page(data),
+            title="Regular Season",
+            icon="📊",
+            url_path="regular-season",
+            default=True,
+        ),
+        st.Page(
+            lambda: _render_playoff_page(data),
+            title="Playoff",
+            icon="🏆",
+            url_path="playoff",
+        ),
+        st.Page(
+            lambda: _render_prediction_results_page(data),
+            title="Hasil Prediksi",
+            icon="🎯",
+            url_path="hasil-prediksi",
+        ),
+    ]
+    st.navigation(pages, position="top").run()
 
 
 if __name__ == "__main__":

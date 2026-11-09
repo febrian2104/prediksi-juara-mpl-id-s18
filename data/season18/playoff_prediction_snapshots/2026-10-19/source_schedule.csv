@@ -1,0 +1,9 @@
+season,stage,match_id,official_match_id,round,scheduled_at,best_of,team_a_id,team_b_id,team_a_score,team_b_score,winner_team_id,status,observed_at,source_url,routing_basis,best_of_basis
+18,playoffs,play_in_1,1108,play_ins,2026-11-04 13:00:00+07:00,5,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,play_in_2,1109,play_ins,2026-11-04 18:00:00+07:00,5,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,upper_semifinal_1,1110,upper_semifinal,2026-11-05 13:00:00+07:00,5,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,upper_semifinal_2,1111,upper_semifinal,2026-11-05 18:00:00+07:00,5,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,lower_semifinal,1112,lower_semifinal,2026-11-06 13:00:00+07:00,5,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,upper_final,1113,upper_final,2026-11-06 18:00:00+07:00,5,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,lower_final,1114,lower_final,2026-11-07 16:00:00+07:00,7,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config
+18,playoffs,grand_final,1115,grand_final,2026-11-08 16:00:00+07:00,7,,,,,,scheduled,2026-10-19,https://id-mpl.com/id/schedule,configured_bracket_order,simulation_config

@@ -1,0 +1,9 @@
+match_id,round,best_of,team_a_id,team_b_id,winner_team_id,loser_team_id,team_a_win_probability,outcome_type,team_a_score,team_b_score,scheduled_at,as_of
+play_in_1,play_ins,5,AE,ONIC,AE,ONIC,,actual,3,1,2026-11-04 14:30:00+07:00,2026-11-09
+play_in_2,play_ins,5,BTR,EVOS,BTR,EVOS,,actual,3,2,2026-11-04 19:15:00+07:00,2026-11-09
+upper_semifinal_1,upper_semifinal,5,NAVI,AE,NAVI,AE,,actual,3,1,2026-11-05 14:30:00+07:00,2026-11-09
+upper_semifinal_2,upper_semifinal,5,TLID,BTR,TLID,BTR,,actual,3,1,2026-11-05 19:15:00+07:00,2026-11-09
+lower_semifinal,lower_semifinal,5,AE,BTR,BTR,AE,,actual,2,3,2026-11-06 14:30:00+07:00,2026-11-09
+upper_final,upper_final,5,NAVI,TLID,NAVI,TLID,,actual,3,2,2026-11-06 19:15:00+07:00,2026-11-09
+lower_final,lower_final,7,TLID,BTR,BTR,TLID,,actual,3,4,2026-11-07 17:30:00+07:00,2026-11-09
+grand_final,grand_final,7,NAVI,BTR,BTR,NAVI,,actual,3,4,2026-11-08 17:30:00+07:00,2026-11-09

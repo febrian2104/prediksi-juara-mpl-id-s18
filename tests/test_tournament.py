@@ -29,6 +29,7 @@ def test_season18_format_is_confirmed_and_declarative(season18_format: dict) -> 
     assert summary["season"] == 18
     assert summary["playoff_team_count"] == 6
     assert summary["bracket_match_count"] == 8
+    assert season18_format["format_confirmation"]["status"] == "official"
     assert summary["round_counts"] == {
         "play_ins": 2,
         "upper_semifinal": 2,
@@ -95,6 +96,8 @@ def test_six_team_bracket_routes_winners_and_losers(season18_format: dict) -> No
     assert matches["play_in_2"]["team_b"] == 4
     assert matches["upper_semifinal_1"]["team_b"] == 2
     assert matches["upper_semifinal_2"]["team_b"] == 3
+    assert matches["upper_semifinal_1"]["team_a"] == 1
+    assert matches["upper_semifinal_2"]["team_a"] == 0
     assert matches["lower_semifinal"]["team_a"] == 2
     assert matches["lower_semifinal"]["team_b"] == 3
     assert matches["lower_final"]["team_a"] == 1

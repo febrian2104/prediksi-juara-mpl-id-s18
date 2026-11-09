@@ -1,0 +1,9 @@
+match_id,team_a_id,team_b_id,matchup_probability,team_a_win_probability
+grand_final,NAVI,BTR,1.0,0.0
+lower_final,TLID,BTR,1.0,0.0
+lower_semifinal,AE,BTR,1.0,0.0
+play_in_1,AE,ONIC,1.0,1.0
+play_in_2,BTR,EVOS,1.0,1.0
+upper_final,NAVI,TLID,1.0,1.0
+upper_semifinal_1,NAVI,AE,1.0,1.0
+upper_semifinal_2,TLID,BTR,1.0,1.0

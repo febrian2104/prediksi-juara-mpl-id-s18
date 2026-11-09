@@ -72,7 +72,7 @@ def _load_season18(
 
 def test_official_season18_snapshot_is_complete_and_time_guarded() -> None:
     teams, rosters, schedule = _load_season18()
-    observed_at = date(2026, 10, 19)
+    observed_at = date(2026, 11, 9)
     checks = validate_season18_data(teams, rosters, schedule, observed_at)
     report = build_season18_report(teams, rosters, schedule, observed_at)
 
@@ -97,7 +97,7 @@ def test_official_season18_snapshot_is_complete_and_time_guarded() -> None:
     ]
     assert report["temporal_policy"]["roster_observed_at"] == [
         "2026-09-01",
-        "2026-10-19",
+        "2026-11-09",
     ]
 
 

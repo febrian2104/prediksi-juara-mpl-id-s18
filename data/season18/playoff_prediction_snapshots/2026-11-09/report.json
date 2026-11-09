@@ -1,0 +1,511 @@
+{
+  "season": 18,
+  "as_of": "2026-11-09",
+  "method": "exact_bracket_enumeration",
+  "terminal_scenario_count": 1,
+  "model_name": "match_logistic_calibrated",
+  "format_confirmation": {
+    "season": 18,
+    "status": "official",
+    "observed_at": "2026-11-09",
+    "basis": "Hasil resmi playoff 4-8 November 2026: seed 2 menghadapi pemenang seed 3/6, seed 1 menghadapi pemenang seed 4/5; enam seri BO5 dan dua seri terakhir BO7.",
+    "source_url": "https://id-mpl.com/id/schedule",
+    "requires_review_for_new_season": true
+  },
+  "simulation_config": {
+    "simulation_version": "2.1",
+    "season": 18,
+    "iterations": 20000,
+    "random_seed": 180831,
+    "format_confirmation": {
+      "season": 18,
+      "status": "official",
+      "observed_at": "2026-11-09",
+      "basis": "Hasil resmi playoff 4-8 November 2026: seed 2 menghadapi pemenang seed 3/6, seed 1 menghadapi pemenang seed 4/5; enam seri BO5 dan dua seri terakhir BO7.",
+      "source_url": "https://id-mpl.com/id/schedule",
+      "requires_review_for_new_season": true
+    },
+    "regular_season": {
+      "format": "double_round_robin_best_of_3",
+      "playoff_team_count": 6,
+      "ranking_order": [
+        "match_wins_desc",
+        "game_differential_desc",
+        "game_wins_desc",
+        "random_tiebreak"
+      ]
+    },
+    "playoffs": {
+      "format": "six_team_hybrid_elimination",
+      "probability_reference_best_of": 3,
+      "championship_match_id": "grand_final",
+      "bracket": [
+        {
+          "match_id": "play_in_1",
+          "round": "play_ins",
+          "best_of": 5,
+          "team_a": {
+            "source": "seed",
+            "seed": 3
+          },
+          "team_b": {
+            "source": "seed",
+            "seed": 6
+          }
+        },
+        {
+          "match_id": "play_in_2",
+          "round": "play_ins",
+          "best_of": 5,
+          "team_a": {
+            "source": "seed",
+            "seed": 4
+          },
+          "team_b": {
+            "source": "seed",
+            "seed": 5
+          }
+        },
+        {
+          "match_id": "upper_semifinal_1",
+          "round": "upper_semifinal",
+          "best_of": 5,
+          "team_a": {
+            "source": "seed",
+            "seed": 2
+          },
+          "team_b": {
+            "source": "winner",
+            "match_id": "play_in_1"
+          }
+        },
+        {
+          "match_id": "upper_semifinal_2",
+          "round": "upper_semifinal",
+          "best_of": 5,
+          "team_a": {
+            "source": "seed",
+            "seed": 1
+          },
+          "team_b": {
+            "source": "winner",
+            "match_id": "play_in_2"
+          }
+        },
+        {
+          "match_id": "lower_semifinal",
+          "round": "lower_semifinal",
+          "best_of": 5,
+          "team_a": {
+            "source": "loser",
+            "match_id": "upper_semifinal_1"
+          },
+          "team_b": {
+            "source": "loser",
+            "match_id": "upper_semifinal_2"
+          }
+        },
+        {
+          "match_id": "upper_final",
+          "round": "upper_final",
+          "best_of": 5,
+          "team_a": {
+            "source": "winner",
+            "match_id": "upper_semifinal_1"
+          },
+          "team_b": {
+            "source": "winner",
+            "match_id": "upper_semifinal_2"
+          }
+        },
+        {
+          "match_id": "lower_final",
+          "round": "lower_final",
+          "best_of": 7,
+          "team_a": {
+            "source": "loser",
+            "match_id": "upper_final"
+          },
+          "team_b": {
+            "source": "winner",
+            "match_id": "lower_semifinal"
+          }
+        },
+        {
+          "match_id": "grand_final",
+          "round": "grand_final",
+          "best_of": 7,
+          "team_a": {
+            "source": "winner",
+            "match_id": "upper_final"
+          },
+          "team_b": {
+            "source": "winner",
+            "match_id": "lower_final"
+          }
+        }
+      ]
+    }
+  },
+  "regular_match_count": 72,
+  "completed_playoff_match_count": 8,
+  "remaining_playoff_match_count": 0,
+  "most_likely_scenario_probability": 1.0,
+  "most_likely_scenario_champion": "BTR",
+  "confirmed_champion": "BTR",
+  "validation": {
+    "champion_probability_sum": 1.0,
+    "grand_final_probability_sum": 2.0,
+    "terminal_probability_sum": 1.0
+  },
+  "assumptions": [
+    "Seluruh seed berasal dari klasemen akhir regular season.",
+    "Pasangan dan BO mengikuti simulation_config; jadwal resmi dapat masih TBD.",
+    "Probabilitas dibekukan pada state data yang tersedia pada cutoff.",
+    "Hasil aktual memperbarui Elo/form; confidence scale memakai kalibrasi akhir RS.",
+    "Prediksi pasangan babak lanjut bersyarat pada skenario; bukan jadwal peserta resmi.",
+    "Skenario lengkap paling mungkin dapat berbeda dari favorit juara marginal."
+  ],
+  "team_predictions": [
+    {
+      "season": 18,
+      "as_of": "2026-11-09",
+      "seed": 4,
+      "team_id": "BTR",
+      "team_name": "Bigetron by Vitality",
+      "champion_probability": 1.0,
+      "grand_final_probability": 1.0,
+      "play_ins_reach_probability": 1.0,
+      "upper_semifinal_reach_probability": 1.0,
+      "lower_semifinal_reach_probability": 1.0,
+      "upper_final_reach_probability": 0.0,
+      "lower_final_reach_probability": 1.0,
+      "grand_final_reach_probability": 1.0
+    },
+    {
+      "season": 18,
+      "as_of": "2026-11-09",
+      "seed": 1,
+      "team_id": "TLID",
+      "team_name": "Team Liquid ID",
+      "champion_probability": 0.0,
+      "grand_final_probability": 0.0,
+      "play_ins_reach_probability": 0.0,
+      "upper_semifinal_reach_probability": 1.0,
+      "lower_semifinal_reach_probability": 0.0,
+      "upper_final_reach_probability": 1.0,
+      "lower_final_reach_probability": 1.0,
+      "grand_final_reach_probability": 0.0
+    },
+    {
+      "season": 18,
+      "as_of": "2026-11-09",
+      "seed": 2,
+      "team_id": "NAVI",
+      "team_name": "NAVI",
+      "champion_probability": 0.0,
+      "grand_final_probability": 1.0,
+      "play_ins_reach_probability": 0.0,
+      "upper_semifinal_reach_probability": 1.0,
+      "lower_semifinal_reach_probability": 0.0,
+      "upper_final_reach_probability": 1.0,
+      "lower_final_reach_probability": 0.0,
+      "grand_final_reach_probability": 1.0
+    },
+    {
+      "season": 18,
+      "as_of": "2026-11-09",
+      "seed": 3,
+      "team_id": "AE",
+      "team_name": "Alter Ego Esports",
+      "champion_probability": 0.0,
+      "grand_final_probability": 0.0,
+      "play_ins_reach_probability": 1.0,
+      "upper_semifinal_reach_probability": 1.0,
+      "lower_semifinal_reach_probability": 1.0,
+      "upper_final_reach_probability": 0.0,
+      "lower_final_reach_probability": 0.0,
+      "grand_final_reach_probability": 0.0
+    },
+    {
+      "season": 18,
+      "as_of": "2026-11-09",
+      "seed": 5,
+      "team_id": "EVOS",
+      "team_name": "EVOS",
+      "champion_probability": 0.0,
+      "grand_final_probability": 0.0,
+      "play_ins_reach_probability": 1.0,
+      "upper_semifinal_reach_probability": 0.0,
+      "lower_semifinal_reach_probability": 0.0,
+      "upper_final_reach_probability": 0.0,
+      "lower_final_reach_probability": 0.0,
+      "grand_final_reach_probability": 0.0
+    },
+    {
+      "season": 18,
+      "as_of": "2026-11-09",
+      "seed": 6,
+      "team_id": "ONIC",
+      "team_name": "ONIC",
+      "champion_probability": 0.0,
+      "grand_final_probability": 0.0,
+      "play_ins_reach_probability": 1.0,
+      "upper_semifinal_reach_probability": 0.0,
+      "lower_semifinal_reach_probability": 0.0,
+      "upper_final_reach_probability": 0.0,
+      "lower_final_reach_probability": 0.0,
+      "grand_final_reach_probability": 0.0
+    }
+  ],
+  "scenario": [
+    {
+      "match_id": "play_in_1",
+      "round": "play_ins",
+      "best_of": 5,
+      "team_a_id": "AE",
+      "team_b_id": "ONIC",
+      "winner_team_id": "AE",
+      "loser_team_id": "ONIC",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 1,
+      "scheduled_at": "2026-11-04T07:30:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "play_in_2",
+      "round": "play_ins",
+      "best_of": 5,
+      "team_a_id": "BTR",
+      "team_b_id": "EVOS",
+      "winner_team_id": "BTR",
+      "loser_team_id": "EVOS",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 2,
+      "scheduled_at": "2026-11-04T12:15:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "upper_semifinal_1",
+      "round": "upper_semifinal",
+      "best_of": 5,
+      "team_a_id": "NAVI",
+      "team_b_id": "AE",
+      "winner_team_id": "NAVI",
+      "loser_team_id": "AE",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 1,
+      "scheduled_at": "2026-11-05T07:30:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "upper_semifinal_2",
+      "round": "upper_semifinal",
+      "best_of": 5,
+      "team_a_id": "TLID",
+      "team_b_id": "BTR",
+      "winner_team_id": "TLID",
+      "loser_team_id": "BTR",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 1,
+      "scheduled_at": "2026-11-05T12:15:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "lower_semifinal",
+      "round": "lower_semifinal",
+      "best_of": 5,
+      "team_a_id": "AE",
+      "team_b_id": "BTR",
+      "winner_team_id": "BTR",
+      "loser_team_id": "AE",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 2,
+      "team_b_score": 3,
+      "scheduled_at": "2026-11-06T07:30:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "upper_final",
+      "round": "upper_final",
+      "best_of": 5,
+      "team_a_id": "NAVI",
+      "team_b_id": "TLID",
+      "winner_team_id": "NAVI",
+      "loser_team_id": "TLID",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 2,
+      "scheduled_at": "2026-11-06T12:15:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "lower_final",
+      "round": "lower_final",
+      "best_of": 7,
+      "team_a_id": "TLID",
+      "team_b_id": "BTR",
+      "winner_team_id": "BTR",
+      "loser_team_id": "TLID",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 4,
+      "scheduled_at": "2026-11-07T10:30:00.000Z",
+      "as_of": "2026-11-09"
+    },
+    {
+      "match_id": "grand_final",
+      "round": "grand_final",
+      "best_of": 7,
+      "team_a_id": "NAVI",
+      "team_b_id": "BTR",
+      "winner_team_id": "BTR",
+      "loser_team_id": "NAVI",
+      "team_a_win_probability": null,
+      "outcome_type": "actual",
+      "team_a_score": 3,
+      "team_b_score": 4,
+      "scheduled_at": "2026-11-08T10:30:00.000Z",
+      "as_of": "2026-11-09"
+    }
+  ],
+  "champion_paths": {
+    "BTR": {
+      "joint_probability": 1.0,
+      "conditional_probability": 1.0,
+      "matches": [
+        {
+          "match_id": "play_in_1",
+          "round": "play_ins",
+          "best_of": 5,
+          "team_a_id": "AE",
+          "team_b_id": "ONIC",
+          "winner_team_id": "AE",
+          "loser_team_id": "ONIC",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 1,
+          "scheduled_at": "2026-11-04T07:30:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "play_in_2",
+          "round": "play_ins",
+          "best_of": 5,
+          "team_a_id": "BTR",
+          "team_b_id": "EVOS",
+          "winner_team_id": "BTR",
+          "loser_team_id": "EVOS",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 2,
+          "scheduled_at": "2026-11-04T12:15:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "upper_semifinal_1",
+          "round": "upper_semifinal",
+          "best_of": 5,
+          "team_a_id": "NAVI",
+          "team_b_id": "AE",
+          "winner_team_id": "NAVI",
+          "loser_team_id": "AE",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 1,
+          "scheduled_at": "2026-11-05T07:30:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "upper_semifinal_2",
+          "round": "upper_semifinal",
+          "best_of": 5,
+          "team_a_id": "TLID",
+          "team_b_id": "BTR",
+          "winner_team_id": "TLID",
+          "loser_team_id": "BTR",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 1,
+          "scheduled_at": "2026-11-05T12:15:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "lower_semifinal",
+          "round": "lower_semifinal",
+          "best_of": 5,
+          "team_a_id": "AE",
+          "team_b_id": "BTR",
+          "winner_team_id": "BTR",
+          "loser_team_id": "AE",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 2,
+          "team_b_score": 3,
+          "scheduled_at": "2026-11-06T07:30:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "upper_final",
+          "round": "upper_final",
+          "best_of": 5,
+          "team_a_id": "NAVI",
+          "team_b_id": "TLID",
+          "winner_team_id": "NAVI",
+          "loser_team_id": "TLID",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 2,
+          "scheduled_at": "2026-11-06T12:15:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "lower_final",
+          "round": "lower_final",
+          "best_of": 7,
+          "team_a_id": "TLID",
+          "team_b_id": "BTR",
+          "winner_team_id": "BTR",
+          "loser_team_id": "TLID",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 4,
+          "scheduled_at": "2026-11-07T10:30:00.000Z",
+          "as_of": "2026-11-09"
+        },
+        {
+          "match_id": "grand_final",
+          "round": "grand_final",
+          "best_of": 7,
+          "team_a_id": "NAVI",
+          "team_b_id": "BTR",
+          "winner_team_id": "BTR",
+          "loser_team_id": "NAVI",
+          "team_a_win_probability": null,
+          "outcome_type": "actual",
+          "team_a_score": 3,
+          "team_b_score": 4,
+          "scheduled_at": "2026-11-08T10:30:00.000Z",
+          "as_of": "2026-11-09"
+        }
+      ]
+    }
+  }
+}
